@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "zwarte-markt",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Users/Daan/AppData/Local/Temp/claude/45e9d126ff361316/10d6b5ca-e805-4cd7-b19d-a359116a7f4c/scratchpad/static.js"],
+      "port": 5173
+    }
+  ]
+}

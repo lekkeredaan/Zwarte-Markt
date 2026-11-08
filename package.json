@@ -1,0 +1,9 @@
+{
+  "name": "zwarte-markt",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Zwarte Markt — een locatie-gebaseerd handels- en blufspel voor de stad (Ravotters).",
+  "engines": {
+    "node": ">=18"
+  }
+}
