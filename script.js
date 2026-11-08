@@ -695,6 +695,7 @@ function bind() {
 
   // NAAM
   $('btn-name-ok').addEventListener('click', onNameOk);
+  $('btn-name-back').addEventListener('click', leaveToHome);
   $('input-name').addEventListener('keydown', e => { if (e.key === 'Enter') onNameOk(); });
 
   // SETUP
@@ -713,6 +714,7 @@ function bind() {
   });
   $('btn-clear-markets').addEventListener('click', () => { setupMarkets = []; renderSetupMarkets(); drawSetupMarkers(); });
   $('btn-create-lobby').addEventListener('click', onCreateLobby);
+  $('btn-setup-back').addEventListener('click', leaveToHome);
 
   // LOBBY
   $('btn-start-game').addEventListener('click', startGame);

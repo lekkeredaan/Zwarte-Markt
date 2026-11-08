@@ -174,6 +174,7 @@ body {
 
 /* ── Modals ── */
 .modal { position: fixed; inset: 0; z-index: 900; background: rgba(10,9,7,.72); display: flex; align-items: flex-end; justify-content: center; padding: 0; }
+.modal[hidden] { display: none; }
 .modal__card {
   width: 100%; max-width: 480px; background: var(--bg1); border: 4px solid var(--gold);
   border-radius: 22px 22px 0 0; padding: 20px 18px calc(env(safe-area-inset-bottom) + 20px);
