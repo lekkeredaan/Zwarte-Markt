@@ -4,9 +4,9 @@
    ══════════════════════════════════════════════════════════════ */
 
 // ── Firebase config ───────────────────────────────────────────────
-// 👇 Vul hier de Realtime Database-URL in (van de Firebase-console).
+// 👇 Realtime Database-URL (van de Firebase-console).
 //    Laat leeg ('') om lokaal te testen zonder Firebase.
-const DB_URL = '';
+const DB_URL = 'https://zwarte-markt-default-rtdb.europe-west1.firebasedatabase.app';
 
 const isLocal = !DB_URL;
 
