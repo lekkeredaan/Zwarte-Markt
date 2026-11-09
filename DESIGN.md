@@ -74,17 +74,43 @@ Daaronder Koop (`--ink`) en Verkoop (`--gain`). Het aantal kies je één keer bo
 Pillen bovenop de kaart: cash (geel, Anton), timer (crème; roze en knipperend in de laatste minuut), centreerknop (rond). Inktschaduw, want de kaart is licht.
 
 ### Koffer `.koffer`
-Zwevende crème kaart onderaan de kaart: titel, geschatte waarde, knop Stand, en een horizontale rij `.item`-chips per goed.
+Zwevende crème kaart onderaan de kaart: titel + geschatte waarde links, knoppen **Tips** (met roze teller `.count-badge`) en **Stand** rechts, en een horizontale rij `.item`-chips per goed (met illustratie).
 
 ### Markt-marker `.mk`
-Druppelvormige pin met het **marktnummer** (Anton) en een inkt-naamlabel eronder. In de buurt: geel en wiebelend. Eigen positie `.me`: roze stip met crème ring.
+Druppelvormige pin met het **marktnummer** (Anton) en een inkt-naamlabel eronder. In de buurt: geel en wiebelend. Tijdens een schok wiebelt de schok-illustratie (`.mk__shock`) rechtsboven de pin. Eigen positie `.me`: roze stip met crème ring; handmatig (`.me--manual`): gele stip.
+
+### Meldingen onder de HUD `.alerts`
+Eén stapel onder de HUD, in deze volgorde:
+- `.banner`: roze (geen GPS, met knop "Zet handmatig") of `.banner--light` crème (tik je plek op de kaart).
+- `.flash`: nieuwsflits bij een marktschok. Inkt met roze rand, illustratie, kicker, Anton-titel in geel. Tik = marktnieuws.
+- `.offerbar`: gele pil "X biedt je een geheime tip aan". Tik = aanbod bekijken.
+
+### Bluf-componenten (in sheets)
+- `.tip` / `.news`: crème-witte kaart met illustratie links, tekst, en `.tip__foot` met `.status` (open / uitgekomen / niet uitgekomen / openstaand) en een actie.
+- `.mchip`: rond marktnummer in de lopende tekst. `.dir--up/down`: groen of roze label "omhoog/omlaag".
+- `.stamp--raid/--shortage`: schuin stempel naast een goed in het grootboek tijdens een schok.
+- `.teaser`: inktblok met illustratie bovenaan verkoop- en aanbodschermen.
+- `.pick`: keuzepil (koper, goed, markt); gekozen = inkt met gele tekst.
+- `.stepper`: −/+ met een grote Anton-waarde (vraagprijs).
+- `.loc-status` + `.dot--ok/manual/off`: locatiestatus.
 
 ### Overig
 - `.ticket`: de lobbycode als smokkelticket (geel, roze schaduw, ponsgaten).
-- `.roster` / `.standings`: pil-rijen met avatar-initiaal of rang; jezelf in geel.
+- `.roster` / `.standings`: pil-rijen met avatar-initiaal of rang; jezelf in geel. `.tag--soft` "handmatig" achter een naam.
 - `.alert`: crème-roze melding met roze zijbalk.
-- `.toast`: inkt-pil bovenin, groene of roze rand.
+- `.toast`: inkt-pil onderin (boven de koffer), groene of roze rand.
 - `.sticker`: schuine roze label-sticker (zoals "ZES SPELLEN" op de hoofdsite).
+- `.btn--line`: omlijnde knop voor secundaire acties op crème.
+
+## Illustraties en iconen
+Geen emoji: alles staat als SVG-`<symbol>` bovenin [`index.html`](index.html) en wordt gebruikt via `ill('id', 'ill ill--lg')` in JS of `<svg><use href="#id"/></svg>` in HTML.
+
+| Soort | Rooster | Stijl | Voorbeelden |
+|---|---|---|---|
+| Illustratie `ill-*` | 48×48 | Inktlijn 3, vlakke merkkleuren (hex van de tokens), harde inktschaduw 2–3px rechtsonder | `ill-horloges`, `ill-kruiden`, `ill-munten`, `ill-sigaren`, `ill-inval`, `ill-tekort`, `ill-tip`, `ill-kroon` |
+| Icoon `ico-*` | 24×24 | Lijn 2,5, ronde uiteinden, `currentColor` | `ico-pin`, `ico-share`, `ico-copy`, `ico-trophy`, `ico-tip`, `ico-news`, `ico-target`, `ico-search`, `ico-pen`, `ico-gps-off`, `ico-x` |
+
+Maten: `.ill--sm` 22, `.ill--md` 30, `.ill--lg` 40, `.ill--xl` 72; `.ico` 20. Nieuw goed of nieuwe schok? Eerst een illustratie in dezelfde stijl tekenen. Enige extra kleur buiten de tokens: bruin `#A8652F` (sigaar) en `#D9A066` (krat).
 
 ## Do's en don'ts
 | ✅ Doen | ❌ Niet doen |
@@ -94,3 +120,6 @@ Druppelvormige pin met het **marktnummer** (Anton) en een inkt-naamlabel eronder
 | Eén primaire knop per scherm | Meerdere gele knoppen naast elkaar |
 | Disabled = gestippeld | Disabled = alleen doorzichtig |
 | Nieuwe waarde? Eerst een token toevoegen | Losse hex of px in een component |
+| Illustratie of icoon uit de sprite | Emoji |
+| Lijsten die pollen via `setHtml()` (alleen bij wijziging) | Elke 2 seconden `innerHTML` herschrijven (tikken vallen weg) |
+| Meldingen in `.alerts`, niet-blokkerend | Een sheet die vanzelf openspringt |

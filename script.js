@@ -1,45 +1,46 @@
 /* ══════════════════════════════════════════════════════════════
-   ZWARTE MARKT — clientlogica
+   ZWARTE MARKT — kernlogica
    Realtime via Firebase RTDB (REST + polling). Zonder DB_URL = lokale testmodus.
+   Zie ook: location.js (GPS / handmatige locatie) en bluff.js (tips, schokken).
    ══════════════════════════════════════════════════════════════ */
 
 // ── Firebase config ───────────────────────────────────────────────
-// 👇 Realtime Database-URL (van de Firebase-console).
-//    Laat leeg ('') om lokaal te testen zonder Firebase.
+// Realtime Database-URL (van de Firebase-console). Leeg ('') = lokaal testen.
 const DB_URL = 'https://zwarte-markt-default-rtdb.europe-west1.firebasedatabase.app';
-
 const isLocal = !DB_URL;
 
 // ── Constanten ────────────────────────────────────────────────────
 const GOODS = [
-  { id: 'horloges', name: 'Namaakhorloges',    short: 'Horloges', emoji: '⌚', base: 60  },
-  { id: 'kruiden',  name: 'Exotische kruiden', short: 'Kruiden',  emoji: '🌿', base: 25  },
-  { id: 'munten',   name: 'Zeldzame munten',   short: 'Munten',   emoji: '🪙', base: 120 },
-  { id: 'sigaren',  name: 'Smokkelsigaren',    short: 'Sigaren',  emoji: '🚬', base: 40  },
+  { id: 'horloges', name: 'Namaakhorloges',    short: 'Horloges', ill: 'ill-horloges', base: 60  },
+  { id: 'kruiden',  name: 'Exotische kruiden', short: 'Kruiden',  ill: 'ill-kruiden',  base: 25  },
+  { id: 'munten',   name: 'Zeldzame munten',   short: 'Munten',   ill: 'ill-munten',   base: 120 },
+  { id: 'sigaren',  name: 'Smokkelsigaren',    short: 'Sigaren',  ill: 'ill-sigaren',  base: 40  },
 ];
 const GOOD = Object.fromEntries(GOODS.map(g => [g.id, g]));
 
 const MARKET_NAMES = ['De Haven', 'Het Pakhuis', 'Steeg 7', 'De Loods', 'Achterom', 'Het Souterrain', "'t Rangeerterrein", 'De Kade', 'Blok C', 'De Werf'];
 
 const POLL_MS       = 2000;   // hoe vaak we de database uitlezen
-const PRICE_TICK_MS = 9000;   // hoe vaak de host de prijzen beweegt
-const TRADE_RADIUS  = 60;     // meter — binnen deze afstand mag je handelen
+const PRICE_TICK_MS = 9000;   // hoe vaak de host de markt bijwerkt
+const TRADE_RADIUS  = 60;     // meter: binnen deze afstand mag je handelen
 const MAX_MARKETS   = 6;
 const MIN_MARKETS   = 2;
 const NL_CENTER     = [52.1, 5.1];
+const ME_HOLD_MS    = 5000;   // eigen kas/koffer na een schrijfactie even lokaal vasthouden
 
 // ── State ─────────────────────────────────────────────────────────
 let me = { pid: genId(), name: '', isHost: false };
 let code = '';
 let game = null;              // volledige game-state (lokaal spiegelbeeld)
-let setupMarkets = [];        // tijdens bord-opzetten
+let setupMarkets = [];        // tijdens speelveld opzetten
 let setupMap = null, gameMap = null;
 let marketLayer = null, meMarker = null;
-let myPos = null;             // {lat,lng}
+let myPos = null;             // {lat,lng}: GPS of handmatig (zie location.js)
 let pollTimer = null, tickTimer = null, clockTimer = null, geoWatch = null;
 let activeMarketId = null;    // open handelspaneel
-let tradeQty = 1;             // gekozen aantal per klik (×1 / ×5 / ×10)
+let tradeQty = 1;             // aantal per klik (×1 / ×5 / ×10)
 let endedShown = false;
+let localMe = null;           // {capital, inv, at}: laatste eigen schrijfactie
 const setupMarkerLayer = { layer: null };
 
 // ══════════════════════════════════════════════════════════════════
@@ -55,6 +56,19 @@ function genCode() {
 function $(id) { return document.getElementById(id); }
 function euro(n) { return '€' + Math.round(n).toLocaleString('nl-NL'); }
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+// Alleen opnieuw opbouwen als de inhoud echt verandert. Zo worden knoppen niet
+// elke poll vervangen (anders kan een tik op een telefoon "wegvallen").
+function setHtml(elOrId, html) {
+  const el = typeof elOrId === 'string' ? $(elOrId) : elOrId;
+  if (el && el._html !== html) { el.innerHTML = html; el._html = html; }
+}
+// Illustratie of icoon uit de sprite in index.html
+function ill(id, cls = 'ill') {
+  return `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"></use></svg>`;
+}
 
 function haversine(a, b) {
   if (!a || !b) return Infinity;
@@ -71,13 +85,21 @@ function toast(msg, kind) {
   t.className = 'toast' + (kind ? ' ' + kind : '');
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
 }
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('screen--active'));
   $(id).classList.add('screen--active');
 }
+
+// ── Sheets (onderlades) ──
+function openSheet(id) { $(id).hidden = false; }
+function closeSheet(id) {
+  $(id).hidden = true;
+  if (id === 'trade-modal') activeMarketId = null;
+}
+function closeAllSheets() { document.querySelectorAll('.sheet').forEach(s => closeSheet(s.id)); }
 
 // ══════════════════════════════════════════════════════════════════
 //  Firebase REST (met foutafhandeling)
@@ -102,11 +124,38 @@ async function fbPatch(path, data) {
   return r.json();
 }
 
+// Meerdere plekken in één keer (atomair) bijwerken, paden relatief aan games/<code>.
+// Na succes ook lokaal doorvoeren, zodat het scherm meteen klopt.
+async function fbUpdate(updates) {
+  if (!isLocal) await fbPatch(`games/${code}`, updates);
+  applyLocal(updates);
+}
+function applyLocal(updates) {
+  if (!game) return;
+  for (const [path, val] of Object.entries(updates)) {
+    const keys = path.split('/');
+    let o = game;
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (typeof o[keys[i]] !== 'object' || o[keys[i]] === null) o[keys[i]] = {};
+      o = o[keys[i]];
+    }
+    const last = keys[keys.length - 1];
+    if (val === null) delete o[last]; else o[last] = val;
+  }
+}
+// Eigen spelergegevens schrijven (+ eventueel andere paden in dezelfde update)
+async function writeMe(fields, extra = {}) {
+  const updates = { ...extra };
+  for (const [k, v] of Object.entries(fields)) updates[`players/${me.pid}/${k}`] = v;
+  await fbUpdate(updates);
+  const p = myPlayer();
+  localMe = { capital: p?.capital, inv: p?.inv || {}, at: Date.now() };
+}
+
 // ══════════════════════════════════════════════════════════════════
 //  Prijs-engine
 // ══════════════════════════════════════════════════════════════════
 function buildMarketsNode(markets) {
-  // markets: [{id,name,lat,lng}]  → node met anchor + prijzen per good
   const node = {};
   for (const m of markets) {
     const anchor = {}, prices = {}, prev = {};
@@ -122,21 +171,28 @@ function buildMarketsNode(markets) {
   return node;
 }
 
-function nextPrices(markets) {
-  // mean-reverting random walk rond anchor
+// Actieve marktschok op een markt (zie bluff.js), of null
+function activeShock(m, now = Date.now()) {
+  return m?.shock && m.shock.until > now ? m.shock : null;
+}
+
+function nextPrices(markets, now = Date.now()) {
+  // mean-reverting random walk rond anchor (tijdens een schok rond anchor × multiplier)
   const out = {};
   for (const [id, m] of Object.entries(markets || {})) {
+    const shock = activeShock(m, now);
     const prices = {}, prev = {};
     for (const g of GOODS) {
       const cur = m.prices?.[g.id] ?? m.anchor?.[g.id] ?? g.base;
-      const anc = m.anchor?.[g.id] ?? g.base;
+      const mult = shock && shock.good === g.id ? shock.mult : 1;
+      const anc = (m.anchor?.[g.id] ?? g.base) * mult;
       let np = cur + (anc - cur) * 0.14 + cur * (Math.random() - 0.5) * 0.18;
-      if (Math.random() < 0.06) np *= (0.7 + Math.random() * 0.7);  // schok
+      if (Math.random() < 0.06) np *= (0.7 + Math.random() * 0.7);  // kleine schommeling
       np = clamp(np, Math.max(1, anc * 0.45), anc * 1.9);
       prev[g.id] = cur;
       prices[g.id] = Math.max(1, Math.round(np));
     }
-    out[id] = { ...m, prices, prev };
+    out[id] = { ...m, prices, prev, shock: shock || null };
   }
   return out;
 }
@@ -148,16 +204,15 @@ async function createLobby() {
   const capital  = parseInt($('opt-capital').value, 10);
   const duration = parseInt($('opt-duration').value, 10);
   const gpsCheck = $('opt-gps').checked;
+  const allowManualLocation = $('opt-manual').checked;
 
-  const markets = setupMarkets.map((m, i) => ({
-    id: 'm' + i, name: m.name, lat: m.lat, lng: m.lng,
-  }));
+  const markets = setupMarkets.map((m, i) => ({ id: 'm' + i, name: m.name, lat: m.lat, lng: m.lng }));
 
   const newGame = {
     status: 'lobby',
     hostId: me.pid,
     createdAt: Date.now(),
-    config: { startCapital: capital, durationSec: duration, gpsCheck },
+    config: { startCapital: capital, durationSec: duration, gpsCheck, allowManualLocation },
     markets: buildMarketsNode(markets),
     players: {
       [me.pid]: { name: me.name, capital, inv: {}, isHost: true, joinedAt: Date.now() },
@@ -166,9 +221,7 @@ async function createLobby() {
 
   if (isLocal) {
     code = 'LOKAAL';
-    game = newGame;
   } else {
-    // unieke code vinden
     let tries = 0;
     do {
       code = genCode();
@@ -176,8 +229,8 @@ async function createLobby() {
       if (!existing) break;
     } while (++tries < 6);
     await fbPut(`games/${code}`, newGame);
-    game = newGame;
   }
+  game = newGame;
   me.isHost = true;
   enterLobby();
 }
@@ -194,6 +247,8 @@ async function joinLobby(enteredCode) {
   await fbPatch(`games/${code}/players/${me.pid}`, {
     name: me.name, capital: startCap, inv: {}, joinedAt: Date.now(),
   });
+  game.players = { ...(game.players || {}), [me.pid]: { name: me.name, capital: startCap, inv: {} } };
+  if (g.status === 'playing') { startPolling(); enterGame(); return; }
   enterLobby();
 }
 
@@ -213,7 +268,7 @@ function renderLobby() {
   if (!game) return;
   const players = Object.entries(game.players || {});
   $('lobby-count').textContent = players.length;
-  $('lobby-players').innerHTML = players.map(([pid, p]) => {
+  setHtml('lobby-players', players.map(([pid, p]) => {
     const name = p.name || '???';
     const isMe = pid === me.pid;
     return `<li class="${isMe ? 'is-me' : ''}">
@@ -221,7 +276,7 @@ function renderLobby() {
       <span>${escapeHtml(name)}${isMe ? ' <small>(jij)</small>' : ''}</span>
       ${p.isHost ? '<span class="tag">Host</span>' : ''}
     </li>`;
-  }).join('');
+  }).join(''));
   const enough = players.length >= 2 || isLocal;
   const startBtn = $('btn-start-game');
   if (startBtn) startBtn.disabled = !enough;
@@ -231,22 +286,17 @@ function renderLobby() {
     : 'Wacht op minstens 2 handelaren om te starten.';
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
 async function startGame() {
   const btn = $('btn-start-game');
   btn.disabled = true;
   try {
     const now = Date.now();
     const endsAt = now + (game.config.durationSec * 1000);
+    if (!isLocal) await fbPatch(`games/${code}`, { status: 'playing', startedAt: now, endsAt });
     game.status = 'playing';
     game.startedAt = now;
     game.endsAt = endsAt;
-    if (!isLocal) {
-      await fbPatch(`games/${code}`, { status: 'playing', startedAt: now, endsAt });
-    }
+    hostStartBluff(now);
     enterGame();
   } catch (e) {
     toast(e.message || 'Starten mislukt', 'bad');
@@ -261,47 +311,64 @@ function enterGame() {
   showScreen('screen-game');
   endedShown = false;
   initGameMap();
+  primeBluff();
   startGeolocation();
   startClock();
-  if (me.isHost) startPriceTick();
+  if (me.isHost) startHostLoop();
   renderGame();
+  syncBluff();
 }
 
 function initGameMap() {
   if (gameMap) { gameMap.remove(); gameMap = null; }
+  meMarker = null;
   gameMap = L.map('game-map', { zoomControl: false, attributionControl: false });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(gameMap);
   L.control.attribution({ prefix: false }).addAttribution('© OpenStreetMap').addTo(gameMap);
   marketLayer = L.layerGroup().addTo(gameMap);
+  gameMap.on('click', onGameMapClick);   // location.js: handmatig plek kiezen
 
   const ms = Object.values(game.markets || {});
   if (ms.length) {
     const bounds = L.latLngBounds(ms.map(m => [m.lat, m.lng]));
     // ruimte laten voor HUD (boven) en koffer (onder)
-    gameMap.fitBounds(bounds, { paddingTopLeft: [50, 110], paddingBottomRight: [50, 190], maxZoom: 17 });
+    gameMap.fitBounds(bounds, { paddingTopLeft: [50, 110], paddingBottomRight: [50, 200], maxZoom: 17 });
   } else {
     gameMap.setView(NL_CENTER, 13);
   }
   setTimeout(() => gameMap && gameMap.invalidateSize(), 150);
   drawMarkets();
+  updateMeMarker();
 }
 
 function drawMarkets() {
-  if (!marketLayer) return;
+  if (!marketLayer || !game) return;
   marketLayer.clearLayers();
   for (const [id, m] of Object.entries(game.markets || {})) {
-    const icon = marketIcon(marketNum(id), m.name, canTradeAt(id));
+    const icon = marketIcon(marketNum(id), m.name, canTradeAt(id), activeShock(m)?.kind);
     const mk = L.marker([m.lat, m.lng], { icon, title: m.name }).addTo(marketLayer);
-    mk.on('click', () => openTrade(id));
+    mk.on('click', () => onMarketClick(id));
   }
 }
 
-// Markt-marker: druppel-pin met nummer + naamlabel (zie DESIGN.md › Markt-marker)
-function marketIcon(num, name, near) {
+function onMarketClick(id) {
+  // Tijdens "plek kiezen" zet een tik op een markt je daar neer (location.js)
+  if (pickingLoc) {
+    const m = game.markets[id];
+    setManualPos(m.lat, m.lng, m.name);
+    stopPicking();
+    return;
+  }
+  openTrade(id);
+}
+
+// Markt-marker: druppel-pin met nummer + naamlabel (+ schok-illustratie)
+function marketIcon(num, name, near, shockKind) {
+  const shock = shockKind ? ill(shockKind === 'raid' ? 'ill-inval' : 'ill-tekort', 'mk__shock') : '';
   return L.divIcon({
     className: 'mk-wrap',
     html: `<div class="mk ${near ? 'mk--near' : ''}">
-             <div class="mk__pin"><span class="mk__num">${num}</span></div>
+             <div class="mk__pinwrap"><div class="mk__pin"><span class="mk__num">${num}</span></div>${shock}</div>
              <div class="mk__name">${escapeHtml(name)}</div>
            </div>`,
     iconSize: [150, 84],
@@ -311,37 +378,11 @@ function marketIcon(num, name, near) {
 function marketNum(id) { return (parseInt(String(id).replace(/\D/g, ''), 10) || 0) + 1; }
 
 function canTradeAt(id) {
-  const m = game.markets?.[id];
+  const m = game?.markets?.[id];
   if (!m) return false;
   if (!game.config?.gpsCheck) return true;      // testmodus
   if (!myPos) return false;
   return haversine(myPos, { lat: m.lat, lng: m.lng }) <= TRADE_RADIUS;
-}
-
-// ── Geolocatie ──
-function startGeolocation() {
-  if (!('geolocation' in navigator)) { $('gps-warning').hidden = false; return; }
-  if (geoWatch != null) return;
-  geoWatch = navigator.geolocation.watchPosition(
-    pos => {
-      myPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      $('gps-warning').hidden = true;
-      updateMeMarker();
-      drawMarkets();
-      if (activeMarketId) renderTrade();
-    },
-    err => {
-      if (game.config?.gpsCheck) $('gps-warning').hidden = false;
-    },
-    { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
-  );
-}
-
-function updateMeMarker() {
-  if (!gameMap || !myPos) return;
-  const icon = L.divIcon({ className: 'mk-wrap', html: '<div class="me"></div>', iconSize: [22, 22], iconAnchor: [11, 11] });
-  if (!meMarker) meMarker = L.marker([myPos.lat, myPos.lng], { icon, zIndexOffset: 1000 }).addTo(gameMap);
-  else meMarker.setLatLng([myPos.lat, myPos.lng]);
 }
 
 // ── Klok / timer ──
@@ -364,24 +405,23 @@ function tickClock() {
   }
 }
 
-// ── Prijs-tick (alleen host) ──
-function startPriceTick() {
+// ── Host-loop: prijzen, marktschokken en tips (alleen host) ──
+function startHostLoop() {
   clearInterval(tickTimer);
-  tickTimer = setInterval(async () => {
-    if (!game || game.status !== 'playing') return;
-    game.markets = nextPrices(game.markets);
-    if (!isLocal) {
-      try { await fbPut(`games/${code}/markets`, game.markets); } catch (e) { /* stil, volgende tick */ }
-    } else {
-      drawMarkets();
-      renderGame();
-      if (activeMarketId) renderTrade();
-    }
-  }, PRICE_TICK_MS);
+  tickTimer = setInterval(hostTick, PRICE_TICK_MS);
+}
+async function hostTick() {
+  if (!game || game.status !== 'playing') return;
+  const now = Date.now();
+  game.markets = nextPrices(game.markets, now);
+  const updates = { ...fireDueEvents(now), ...dealTipsIfDue(now) };   // bluff.js
+  updates.markets = game.markets;
+  try { await fbUpdate(updates); } catch (e) { /* stil: volgende tick opnieuw */ }
+  if (isLocal) { drawMarkets(); renderGame(); if (activeMarketId) renderTrade(); syncBluff(); }
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  Render spel (cash + inventaris)
+//  Render spel (cash + koffer)
 // ══════════════════════════════════════════════════════════════════
 function myPlayer() { return game?.players?.[me.pid]; }
 
@@ -392,15 +432,14 @@ function renderGame() {
   renderInventory();
 }
 
-// Koffer: chips per goed + geschatte waarde (zie DESIGN.md › Koffer)
 function renderInventory() {
   const inv = myPlayer()?.inv || {};
   const owned = GOODS.filter(g => (inv[g.id] || 0) > 0);
   const worth = owned.reduce((sum, g) => sum + inv[g.id] * avgPrice(g.id), 0);
-  $('inv-worth').textContent = owned.length ? `≈ ${euro(worth)}` : '';
-  $('inv-list').innerHTML = owned.length
-    ? owned.map(g => `<span class="item"><span aria-hidden="true">${g.emoji}</span>${inv[g.id]}× ${g.short}</span>`).join('')
-    : '<p class="koffer__empty">Leeg. Tik op een markt om te handelen.</p>';
+  $('inv-worth').textContent = owned.length ? `≈ ${euro(worth)}` : 'leeg';
+  setHtml('inv-list', owned.length
+    ? owned.map(g => `<span class="item">${ill(g.ill, 'ill ill--sm')}${inv[g.id]}× ${g.short}</span>`).join('')
+    : '<p class="koffer__empty">Tik op een markt om te handelen.</p>');
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -408,17 +447,16 @@ function renderInventory() {
 // ══════════════════════════════════════════════════════════════════
 function openTrade(id) {
   activeMarketId = id;
-  $('trade-modal').hidden = false;
+  openSheet('trade-modal');
   renderTrade();
 }
-function closeTrade() { activeMarketId = null; $('trade-modal').hidden = true; }
 
 // Prijs t.o.v. het gemiddelde van alle markten → deal-label
 function dealInfo(gid, price) {
   const pct = Math.round((price / avgPrice(gid) - 1) * 100);
-  if (pct <= -5) return { cls: 'low',  text: `${pct}% · goedkoop` };
-  if (pct >= 5)  return { cls: 'high', text: `+${pct}% · duur` };
-  return { cls: 'mid', text: '≈ gemiddeld' };
+  if (pct <= -5) return { cls: 'low',  text: `<b>${pct}%</b> goedkoop` };
+  if (pct >= 5)  return { cls: 'high', text: `<b>+${pct}%</b> duur` };
+  return { cls: 'mid', text: 'gemiddeld' };
 }
 
 function renderTrade() {
@@ -434,7 +472,7 @@ function renderTrade() {
   if (!game.config?.gpsCheck) {
     distEl.textContent = 'Testmodus: overal handelen toegestaan';
   } else if (!myPos) {
-    distEl.textContent = 'Wachten op je GPS-locatie…';
+    distEl.textContent = 'Nog geen locatie. Tik rechtsboven op het vizier.';
     far = true;
   } else {
     const d = Math.round(haversine(myPos, { lat: m.lat, lng: m.lng }));
@@ -443,12 +481,13 @@ function renderTrade() {
   }
   distEl.className = 'sheet__sub' + (far ? ' is-far' : '');
 
-  document.querySelectorAll('.seg__btn').forEach(b =>
+  document.querySelectorAll('#trade-qty .seg__btn').forEach(b =>
     b.setAttribute('aria-pressed', String(Number(b.dataset.qty) === tradeQty)));
 
   const p = myPlayer();
   const qty = tradeQty;
-  $('trade-goods').innerHTML = GOODS.map(g => {
+  const shock = activeShock(m);
+  setHtml('trade-goods', GOODS.map(g => {
     const price = m.prices?.[g.id] ?? g.base;
     const prev = m.prev?.[g.id] ?? price;
     const trend = price > prev ? 'up' : (price < prev ? 'down' : '');
@@ -456,12 +495,14 @@ function renderTrade() {
     const deal = dealInfo(g.id, price);
     const canBuy = near && (p?.capital || 0) >= price * qty;
     const canSell = near && owned >= qty;
+    const stamp = shock && shock.good === g.id
+      ? `<span class="stamp stamp--${shock.kind}">${shock.kind === 'raid' ? 'Inval' : 'Tekort'}</span>` : '';
     return `
       <div class="row">
         <div class="row__top">
-          <span class="row__icon" aria-hidden="true">${g.emoji}</span>
+          ${ill(g.ill, 'ill ill--lg')}
           <div>
-            <div class="row__name">${g.name}</div>
+            <div class="row__name">${g.name}${stamp}</div>
             <div class="row__meta">In koffer: <strong>${owned}</strong>${trend ? ` · <span class="trend-${trend}">${trend === 'up' ? '▲ stijgt' : '▼ daalt'}</span>` : ''}</div>
           </div>
           <div class="row__price">
@@ -475,7 +516,7 @@ function renderTrade() {
           <button class="btn btn--gain" data-act="sell" data-g="${g.id}" ${canSell ? '' : 'disabled'}>Verkoop ${qty}</button>
         </div>
       </div>`;
-  }).join('');
+  }).join(''));
 }
 
 async function doTrade(gid, kind) {
@@ -500,23 +541,22 @@ async function doTrade(gid, kind) {
 
   document.querySelectorAll('#trade-goods .btn').forEach(b => b.disabled = true);
   try {
-    if (!isLocal) await fbPatch(`games/${code}/players/${me.pid}`, { capital, inv });
-    p.capital = capital;
-    p.inv = inv;
-    toast(`${kind === 'buy' ? 'Gekocht' : 'Verkocht'}: ${qty}× ${GOOD[gid].emoji} voor ${euro(total)}`, 'good');
+    await writeMe({ capital, inv });
+    toast(`${kind === 'buy' ? 'Gekocht' : 'Verkocht'}: ${qty}× ${GOOD[gid].short} voor ${euro(total)}`, 'good');
     renderGame();
   } catch (e) {
     toast(e.message || 'Handelen mislukt, probeer opnieuw', 'bad');
   } finally {
-    renderTrade();   // bouwt de knoppen opnieuw op met de juiste status
+    $('trade-goods')._html = null;   // forceer opnieuw opbouwen, ook als de inhoud gelijk bleef
+    renderTrade();                   // zo staan uitgeschakelde knoppen nooit vast
   }
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  Leaderboard / net worth
+//  Stand / waarde
 // ══════════════════════════════════════════════════════════════════
 function avgPrice(gid) {
-  const ms = Object.values(game.markets || {});
+  const ms = Object.values(game?.markets || {});
   if (!ms.length) return GOOD[gid].base;
   const sum = ms.reduce((a, m) => a + (m.prices?.[gid] ?? GOOD[gid].base), 0);
   return sum / ms.length;
@@ -524,24 +564,29 @@ function avgPrice(gid) {
 function netWorth(p) {
   let w = p.capital || 0;
   for (const g of GOODS) w += (p.inv?.[g.id] || 0) * avgPrice(g.id);
+  // Nog niet bijgeschreven tipbetalingen tellen mee (de mijne die al verwerkt zijn niet dubbel)
+  const isMe = p === myPlayer();
+  for (const [id, pay] of Object.entries(p.payments || {})) {
+    if (!(isMe && foldedPays.has(id))) w += pay.amount || 0;
+  }
   return w;
 }
 function standings() {
-  return Object.entries(game.players || {})
-    .map(([pid, p]) => ({ pid, name: p.name || '???', worth: netWorth(p) }))
+  return Object.entries(game?.players || {})
+    .map(([pid, p]) => ({ pid, name: p.name || '???', worth: netWorth(p), manual: !!p.manualLoc }))
     .sort((a, b) => b.worth - a.worth);
 }
 function renderLeaderboardInto(elId) {
-  $(elId).innerHTML = standings().map((s, i) => {
+  setHtml(elId, standings().map((s, i) => {
     const isMe = s.pid === me.pid;
     return `<li class="${isMe ? 'is-me' : ''}">
-      <span class="rank">${i === 0 ? '👑' : i + 1}</span>
-      <span>${escapeHtml(s.name)}${isMe ? ' <small>(jij)</small>' : ''}</span>
+      <span class="rank">${i === 0 ? ill('ill-kroon', 'ill ill--md') : i + 1}</span>
+      <span>${escapeHtml(s.name)}${isMe ? ' <small>(jij)</small>' : ''}${s.manual ? '<span class="tag tag--soft">handmatig</span>' : ''}</span>
       <span class="worth">${euro(s.worth)}</span>
     </li>`;
-  }).join('');
+  }).join(''));
 }
-function openLeaderboard() { renderLeaderboardInto('lb-list'); $('lb-modal').hidden = false; }
+function openLeaderboard() { renderLeaderboardInto('lb-list'); openSheet('lb-modal'); }
 
 // ══════════════════════════════════════════════════════════════════
 //  Einde
@@ -550,12 +595,12 @@ function endGame() {
   if (endedShown) return;
   endedShown = true;
   stopTimers();
+  stopPicking();
+  closeAllSheets();
   showScreen('screen-end');
-  const st = standings();
-  const winner = st[0];
-  const box = $('end-winner');
+  const winner = standings()[0];
   if (winner) {
-    box.innerHTML = `<span class="winner__crown" aria-hidden="true">👑</span>
+    $('end-winner').innerHTML = `${ill('ill-kroon', 'ill ill--xl')}
       <span class="winner__label">Rijkste smokkelaar</span>
       <span class="winner__name">${escapeHtml(winner.name)}</span>
       <span class="winner__worth">${euro(winner.worth)}</span>`;
@@ -581,29 +626,34 @@ function startPolling() {
       const g = await fbGet(`games/${code}`);
       if (!g) return;
       mergeRemote(g);
-    } catch (e) { /* netwerkhik — volgende poll */ }
+    } catch (e) { /* netwerkhik: volgende poll */ }
   }, POLL_MS);
 }
 
 function mergeRemote(g) {
   const wasStatus = game?.status;
-  // bewaar mijn eigen (nieuwere) speler-state niet overschrijven tijdens snelle trades:
-  const myLocal = game?.players?.[me.pid];
+  // Een poll die vlak na mijn eigen schrijfactie binnenkomt kan nog oud zijn:
+  // houd mijn kas/koffer dan even lokaal vast (ik ben de enige die ze schrijft).
+  const mine = g.players?.[me.pid];
+  if (mine && localMe && Date.now() - localMe.at < ME_HOLD_MS) {
+    mine.capital = localMe.capital;
+    mine.inv = localMe.inv;
+  }
   game = g;
-  // host is bron voor prijzen/markten; andere spelers nemen remote over.
-  // Voor de speler zelf: gebruik remote (we schrijven elke trade meteen weg).
   if (game.status === 'lobby') renderLobby();
   if (game.status === 'playing') {
     if (wasStatus !== 'playing') { enterGame(); return; }
     drawMarkets();
     renderGame();
     if (activeMarketId) renderTrade();
+    if (!$('lb-modal').hidden) renderLeaderboardInto('lb-list');
+    syncBluff();
   }
   if (game.status === 'ended') endGame();
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  SETUP-kaart (bord opzetten)
+//  Speelveld opzetten
 // ══════════════════════════════════════════════════════════════════
 function enterSetup() {
   showScreen('screen-setup');
@@ -620,7 +670,6 @@ function initSetupMap() {
   setupMarkerLayer.layer = L.layerGroup().addTo(setupMap);
   setupMap.setView(NL_CENTER, 7);
 
-  // centreer op speler
   if ('geolocation' in navigator) {
     navigator.geolocation.getCurrentPosition(
       pos => setupMap && setupMap.setView([pos.coords.latitude, pos.coords.longitude], 16),
@@ -632,7 +681,7 @@ function initSetupMap() {
 }
 
 function addSetupMarket(lat, lng) {
-  if (setupMarkets.length >= MAX_MARKETS) { toast(`Max ${MAX_MARKETS} markten`, 'bad'); return; }
+  if (setupMarkets.length >= MAX_MARKETS) { toast(`Maximaal ${MAX_MARKETS} markten`, 'bad'); return; }
   const used = new Set(setupMarkets.map(m => m.name));
   const name = MARKET_NAMES.find(n => !used.has(n)) || ('Markt ' + (setupMarkets.length + 1));
   setupMarkets.push({ name, lat, lng });
@@ -654,7 +703,7 @@ function renderSetupMarkets() {
     ? setupMarkets.map((m, i) => `
         <span class="chip">
           <span class="chip__num">${i + 1}</span>${escapeHtml(m.name)}
-          <button class="chip__x" data-i="${i}" aria-label="Verwijder ${escapeHtml(m.name)}">✕</button>
+          <button class="chip__x" data-i="${i}" aria-label="Verwijder ${escapeHtml(m.name)}"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
         </span>`).join('')
     : '<p class="chips__empty">Nog geen markten. Tik op de kaart.</p>';
   const btn = $('btn-create-lobby');
@@ -667,17 +716,37 @@ function renderSetupMarkets() {
   }
 }
 
+async function onSetupSearch(e) {
+  e.preventDefault();
+  const q = $('setup-search').value.trim();
+  if (q.length < 2) return;
+  const btn = e.submitter || $('setup-search-form').querySelector('button');
+  btn.disabled = true;
+  try {
+    const r = await geocode(q);   // location.js
+    setupMap.setView([r.lat, r.lng], 16);
+    $('setup-search').blur();
+  } catch (err) {
+    toast(err.message || 'Zoeken lukte niet', 'bad');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════
-//  Leave / reset
+//  Verlaten / reset
 // ══════════════════════════════════════════════════════════════════
 function leaveToHome() {
   stopTimers();
+  stopPicking();
+  closeAllSheets();
   if (gameMap) { gameMap.remove(); gameMap = null; }
   if (setupMap) { setupMap.remove(); setupMap = null; }
   meMarker = null;
-  game = null; code = ''; me.isHost = false; activeMarketId = null; myPos = null;
+  game = null; code = ''; me.isHost = false; activeMarketId = null; myPos = null; localMe = null;
   me.pid = genId();
-  $('trade-modal').hidden = true; $('lb-modal').hidden = true;
+  resetLocation();
+  resetBluff();
   showScreen('screen-home');
 }
 
@@ -708,15 +777,16 @@ function bind() {
     if (b) removeSetupMarket(parseInt(b.dataset.i, 10));
   });
   $('btn-use-myloc').addEventListener('click', () => {
-    if (!('geolocation' in navigator)) { toast('Geen GPS beschikbaar', 'bad'); return; }
+    if (!('geolocation' in navigator)) { toast('Geen GPS beschikbaar. Zoek je plek of tik op de kaart.', 'bad'); return; }
     const btn = $('btn-use-myloc'); btn.disabled = true;
     navigator.geolocation.getCurrentPosition(
       pos => { addSetupMarket(pos.coords.latitude, pos.coords.longitude); setupMap.setView([pos.coords.latitude, pos.coords.longitude], 17); btn.disabled = false; },
-      () => { toast('Locatie niet gelukt', 'bad'); btn.disabled = false; },
+      () => { toast('GPS lukte niet. Zoek je plek of tik op de kaart.', 'bad'); btn.disabled = false; },
       { enableHighAccuracy: true, timeout: 8000 }
     );
   });
   $('btn-clear-markets').addEventListener('click', () => { setupMarkets = []; renderSetupMarkets(); drawSetupMarkers(); });
+  $('setup-search-form').addEventListener('submit', onSetupSearch);
   $('btn-create-lobby').addEventListener('click', onCreateLobby);
   $('btn-setup-back').addEventListener('click', leaveToHome);
 
@@ -738,34 +808,38 @@ function bind() {
   });
   $('btn-leave-lobby').addEventListener('click', leaveToHome);
 
-  // GAME
-  $('btn-recenter').addEventListener('click', () => { if (gameMap && myPos) gameMap.setView([myPos.lat, myPos.lng], 17); });
+  // SPEL
   $('btn-leaderboard').addEventListener('click', openLeaderboard);
-  $('trade-close').addEventListener('click', closeTrade);
-  $('lb-close').addEventListener('click', () => $('lb-modal').hidden = true);
-  $('trade-modal').addEventListener('click', e => { if (e.target.id === 'trade-modal') closeTrade(); });
-  $('lb-modal').addEventListener('click', e => { if (e.target.id === 'lb-modal') $('lb-modal').hidden = true; });
   $('trade-goods').addEventListener('click', e => {
     const b = e.target.closest('button[data-act]');
     if (!b) return;
     if (b.dataset.act === 'buy') doTrade(b.dataset.g, 'buy');
     else if (b.dataset.act === 'sell') doTrade(b.dataset.g, 'sell');
   });
-  document.querySelector('#trade-modal .seg').addEventListener('click', e => {
+  $('trade-qty').addEventListener('click', e => {
     const b = e.target.closest('.seg__btn');
     if (!b) return;
     tradeQty = Number(b.dataset.qty) || 1;
     renderTrade();
   });
-  // Escape sluit open sheets (toetsenbord / desktop)
+
+  // Alle sheets: sluiten via ✕ (data-close) of tik op de achtergrond
+  document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => {
+    if (e.target === s || e.target.closest('[data-close]')) closeSheet(s.id);
+  }));
+  // Escape sluit de bovenste open sheet
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    if (!$('trade-modal').hidden) closeTrade();
-    $('lb-modal').hidden = true;
+    const open = [...document.querySelectorAll('.sheet')].filter(s => !s.hidden);
+    if (open.length) closeSheet(open[open.length - 1].id);
+    else if (pickingLoc) stopPicking();
   });
 
   // EINDE
   $('btn-home').addEventListener('click', leaveToHome);
+
+  bindLocation();   // location.js
+  bindBluff();      // bluff.js
 }
 
 function showHomeError(msg) { const e = $('home-error'); e.textContent = msg; e.hidden = false; }
@@ -782,11 +856,8 @@ async function onNameOk() {
   me.name = name;
   const btn = $('btn-name-ok'); btn.disabled = true;
   try {
-    if (pendingAction === 'create') {
-      enterSetup();
-    } else {
-      await joinLobby(code);
-    }
+    if (pendingAction === 'create') enterSetup();
+    else await joinLobby(code);
   } catch (e) {
     const el = $('name-error'); el.textContent = e.message || 'Er ging iets mis.'; el.hidden = false;
   } finally {
@@ -811,6 +882,6 @@ document.addEventListener('DOMContentLoaded', () => {
   bind();
   if (isLocal) {
     const c = $('credit');
-    if (c) c.innerHTML += ' · <em style="color:#f5c518">lokale testmodus</em>';
+    if (c) c.innerHTML += ' · <em>lokale testmodus</em>';
   }
 });

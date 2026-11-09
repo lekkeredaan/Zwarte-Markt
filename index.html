@@ -15,6 +15,92 @@
 </head>
 <body>
 
+  <!-- ══════════ ILLUSTRATIES & ICONEN (zie DESIGN.md › Illustraties) ══════════ -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <!-- Goederen (48×48, inktlijn 3, merkkleuren) -->
+      <symbol id="ill-horloges" viewBox="0 0 48 48">
+        <rect x="16" y="3" width="16" height="12" rx="3" fill="#FF2E63" stroke="#141414" stroke-width="3"/>
+        <rect x="16" y="33" width="16" height="12" rx="3" fill="#FF2E63" stroke="#141414" stroke-width="3"/>
+        <circle cx="26" cy="26" r="13" fill="#141414"/>
+        <rect x="36" y="21" width="5" height="6" rx="1.5" fill="#FFD400" stroke="#141414" stroke-width="2.5"/>
+        <circle cx="24" cy="24" r="13" fill="#FFD400" stroke="#141414" stroke-width="3"/>
+        <circle cx="24" cy="24" r="8" fill="#FBF1DC" stroke="#141414" stroke-width="2.5"/>
+        <path d="M24 19.5V24l3.5 2.5" fill="none" stroke="#141414" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </symbol>
+      <symbol id="ill-kruiden" viewBox="0 0 48 48">
+        <path d="M24 44V22" stroke="#141414" stroke-width="3" stroke-linecap="round"/>
+        <path d="M23 30C13 31 7 24 8 14c10 0 16 6 15 16Z" fill="#2BD67B" stroke="#141414" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M25 30c10 1 16-6 15-16-10 0-16 6-15 16Z" fill="#2BD67B" stroke="#141414" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M24 25c-6-4-6-13 0-20 6 7 6 16 0 20Z" fill="#9BEFBE" stroke="#141414" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M21.5 28 13 19.5M26.5 28 35 19.5M24 21V11" stroke="#141414" stroke-width="2" stroke-linecap="round"/>
+        <rect x="17" y="33" width="14" height="7" rx="2.5" fill="#FF2E63" stroke="#141414" stroke-width="2.5"/>
+      </symbol>
+      <symbol id="ill-munten" viewBox="0 0 48 48">
+        <circle cx="31" cy="18" r="13" fill="#E0B400" stroke="#141414" stroke-width="3"/>
+        <circle cx="22" cy="31" r="14" fill="#141414"/>
+        <circle cx="20" cy="29" r="14" fill="#FFD400" stroke="#141414" stroke-width="3"/>
+        <circle cx="20" cy="29" r="9.5" fill="none" stroke="#141414" stroke-width="2" stroke-dasharray="2 3"/>
+        <path d="m20 22 2.1 4.3 4.7.7-3.4 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7-3.4-3.3 4.7-.7Z" fill="#FBF1DC" stroke="#141414" stroke-width="2" stroke-linejoin="round"/>
+      </symbol>
+      <symbol id="ill-sigaren" viewBox="0 0 48 48">
+        <path d="M39 13c-3-3 1-5-2-9M44 15c-3-3 1-5-2-9" fill="none" stroke="#141414" stroke-width="2.5" stroke-linecap="round"/>
+        <g transform="rotate(-35 24 28)">
+          <rect x="7" y="25" width="38" height="12" rx="6" fill="#141414"/>
+          <rect x="5" y="22" width="38" height="12" rx="6" fill="#A8652F" stroke="#141414" stroke-width="3"/>
+          <path d="M37 23.5h1a4.5 4.5 0 0 1 0 9h-1Z" fill="#FF2E63"/>
+          <path d="M37 23v10" stroke="#141414" stroke-width="2.5"/>
+          <rect x="15" y="22" width="8" height="12" fill="#FFD400" stroke="#141414" stroke-width="2.5"/>
+        </g>
+      </symbol>
+      <!-- Marktschokken -->
+      <symbol id="ill-inval" viewBox="0 0 48 48">
+        <path d="M9 9 5 5M39 9l4-4M24 6V1M6 22H1M47 22h-5" stroke="#141414" stroke-width="3" stroke-linecap="round"/>
+        <rect x="9" y="37" width="34" height="9" rx="2" fill="#141414"/>
+        <path d="M12 36V25a12 12 0 0 1 24 0v11Z" fill="#FF2E63" stroke="#141414" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M18 25a6 6 0 0 1 6-6" fill="none" stroke="#FBF1DC" stroke-width="3" stroke-linecap="round"/>
+        <rect x="7" y="35" width="34" height="9" rx="2" fill="#FFD400" stroke="#141414" stroke-width="3"/>
+      </symbol>
+      <symbol id="ill-tekort" viewBox="0 0 48 48">
+        <rect x="8" y="22" width="36" height="23" rx="2" fill="#141414"/>
+        <rect x="5" y="19" width="36" height="23" rx="2" fill="#D9A066" stroke="#141414" stroke-width="3"/>
+        <path d="M5 27h36M5 34h36M14 19v23M32 19v23" stroke="#141414" stroke-width="2.5"/>
+        <circle cx="37" cy="12" r="9" fill="#2BD67B" stroke="#141414" stroke-width="3"/>
+        <path d="M37 16.5v-9M33 11.5l4-4 4 4" fill="none" stroke="#141414" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </symbol>
+      <!-- Geheime tip -->
+      <symbol id="ill-tip" viewBox="0 0 48 48">
+        <rect x="7" y="14" width="38" height="28" rx="3" fill="#141414"/>
+        <rect x="4" y="11" width="38" height="28" rx="3" fill="#FBF1DC" stroke="#141414" stroke-width="3"/>
+        <path d="m5 13 18 13 18-13" fill="none" stroke="#141414" stroke-width="3" stroke-linejoin="round"/>
+        <circle cx="23" cy="27" r="6.5" fill="#FF2E63" stroke="#141414" stroke-width="2.5"/>
+        <path d="M20.5 27h5" stroke="#141414" stroke-width="2" stroke-linecap="round"/>
+      </symbol>
+      <!-- Kroon (winnaar) -->
+      <symbol id="ill-kroon" viewBox="0 0 48 48">
+        <path d="m8 18 9 9 9-14 9 14 9-9-4 22H12Z" fill="#141414"/>
+        <path d="m6 16 9 9 9-14 9 14 9-9-4 22H10Z" fill="#FFD400" stroke="#141414" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M11.5 32h25" stroke="#141414" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="6" cy="14" r="3.2" fill="#FF2E63" stroke="#141414" stroke-width="2"/>
+        <circle cx="24" cy="9" r="3.2" fill="#2BD67B" stroke="#141414" stroke-width="2"/>
+        <circle cx="42" cy="14" r="3.2" fill="#FF2E63" stroke="#141414" stroke-width="2"/>
+      </symbol>
+
+      <!-- Lijn-iconen (24×24, kleur volgt de tekst) -->
+      <symbol id="ico-pin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.5s6.5-6 6.5-11.5a6.5 6.5 0 1 0-13 0c0 5.5 6.5 11.5 6.5 11.5Z"/><circle cx="12" cy="10" r="2.4"/></g></symbol>
+      <symbol id="ico-share" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7.5 7.5 12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></g></symbol>
+      <symbol id="ico-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 8.5V6A2.5 2.5 0 0 0 13 3.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/></g></symbol>
+      <symbol id="ico-trophy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 3.5h9V9a4.5 4.5 0 0 1-9 0Z"/><path d="M7.5 5.5h-3a3 3 0 0 0 3 4.5M16.5 5.5h3a3 3 0 0 1-3 4.5M12 13.5v3.5M8 20.5h8M9.5 17h5v3.5h-5Z"/></g></symbol>
+      <symbol id="ico-tip" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m3.5 7 8.5 6.5L20.5 7"/></g></symbol>
+      <symbol id="ico-news" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h12v14a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2Z"/><path d="M16 8.5h4v10a2 2 0 0 1-4 0M7.5 8.5h5M7.5 12h5M7.5 15.5h3"/></g></symbol>
+      <symbol id="ico-target" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></g></symbol>
+      <symbol id="ico-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></g></symbol>
+      <symbol id="ico-pen" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4.5L19.5 9 15 4.5 4 15.5Z"/><path d="m12.5 7 4.5 4.5"/></g></symbol>
+      <symbol id="ico-x" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></g></symbol>
+      <symbol id="ico-gps-off" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4M4 4l16 16"/></g></symbol>
+    </defs>
+  </svg>
+
   <!-- ══════════ HOME ══════════ -->
   <section id="screen-home" class="screen screen--active">
     <div class="home">
@@ -61,12 +147,16 @@
       <h2 class="topbar__title">Speelveld</h2>
     </header>
     <p class="setup-hint">Tik op de kaart om <strong>2 tot 6 markten</strong> te plaatsen, op echte plekken in jullie speelgebied.</p>
+    <form id="setup-search-form" class="searchbar setup-search" role="search">
+      <input id="setup-search" class="field" type="search" placeholder="Zoek een plaats of adres" aria-label="Zoek een plaats of adres" autocomplete="off" />
+      <button class="btn btn--secondary" type="submit" aria-label="Zoeken"><svg class="ico" aria-hidden="true"><use href="#ico-search"/></svg></button>
+    </form>
     <div id="setup-map" class="setup-map"></div>
 
     <div class="dock">
       <div id="setup-market-list" class="chips"></div>
       <div class="dock__tools">
-        <button id="btn-use-myloc" class="btn btn--ghost btn--sm">📍 Op mijn plek</button>
+        <button id="btn-use-myloc" class="btn btn--ghost btn--sm"><svg class="ico" aria-hidden="true"><use href="#ico-pin"/></svg> Op mijn plek</button>
         <button id="btn-clear-markets" class="btn btn--ghost btn--sm">Wis alles</button>
       </div>
       <div class="opts">
@@ -96,6 +186,13 @@
           <small>Alleen handelen als je bij de markt staat. Zet uit om binnen te testen.</small>
         </span>
       </label>
+      <label class="toggle">
+        <input type="checkbox" id="opt-manual" checked />
+        <span class="toggle__text">
+          <strong>Handmatige locatie toestaan</strong>
+          <small>Spelers zonder GPS mogen hun plek zelf op de kaart zetten. De rest ziet dat in de stand.</small>
+        </span>
+      </label>
       <button id="btn-create-lobby" class="btn btn--primary btn--lg btn--block">Lobby openen →</button>
       <p id="setup-error" class="alert" role="alert" hidden></p>
     </div>
@@ -113,8 +210,8 @@
         <div id="lobby-code" class="ticket__code">------</div>
       </div>
       <div class="row2">
-        <button id="btn-share-code" class="btn btn--secondary">📤 Delen</button>
-        <button id="btn-copy-code" class="btn btn--secondary">📋 Kopieer</button>
+        <button id="btn-share-code" class="btn btn--secondary"><svg class="ico" aria-hidden="true"><use href="#ico-share"/></svg> Delen</button>
+        <button id="btn-copy-code" class="btn btn--secondary"><svg class="ico" aria-hidden="true"><use href="#ico-copy"/></svg> Kopieer</button>
       </div>
       <div class="section-head">
         <span class="label">Handelaren</span>
@@ -144,21 +241,42 @@
         <span id="hud-capital" class="cash__val">€0</span>
       </div>
       <div id="hud-timer" class="pill timer" aria-label="Resterende tijd">--:--</div>
-      <button id="btn-recenter" class="pill icon-btn" aria-label="Centreer op mij">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" fill="currentColor" />
-          <path d="M12 1v4M12 19v4M1 12h4M19 12h4" />
-        </svg>
+      <button id="btn-location" class="pill icon-btn" aria-label="Jouw locatie">
+        <svg class="ico" aria-hidden="true"><use href="#ico-target"/></svg>
       </button>
     </div>
 
-    <div id="gps-warning" class="banner" role="status" hidden>📡 Geen GPS. Zet locatie aan om te kunnen handelen.</div>
+    <!-- Meldingen onder de HUD -->
+    <div class="alerts">
+      <div id="gps-warning" class="banner" role="status" hidden>
+        <svg class="ico" aria-hidden="true"><use href="#ico-gps-off"/></svg>
+        <span>Geen GPS. Zet locatie aan om te handelen.</span>
+        <button id="btn-gps-manual" class="btn btn--ink btn--sm">Zet handmatig</button>
+      </div>
+      <div id="pick-banner" class="banner banner--light" role="status" hidden>
+        <svg class="ico" aria-hidden="true"><use href="#ico-pin"/></svg>
+        <span>Tik op de kaart waar je staat.</span>
+        <button id="btn-pick-cancel" class="btn btn--line btn--sm">Annuleer</button>
+      </div>
+      <button id="newsflash" class="flash" hidden></button>
+      <button id="offer-banner" class="offerbar" hidden></button>
+    </div>
 
     <div id="inv-tray" class="koffer">
       <div class="koffer__head">
-        <h3 class="koffer__title">Koffer</h3>
-        <span id="inv-worth" class="koffer__worth"></span>
-        <button id="btn-leaderboard" class="btn btn--ink btn--sm">🏆 Stand</button>
+        <div class="koffer__titles">
+          <h3 class="koffer__title">Koffer</h3>
+          <span id="inv-worth" class="koffer__worth"></span>
+        </div>
+        <div class="koffer__actions">
+          <button id="btn-tips" class="btn btn--ink btn--sm has-badge">
+            <svg class="ico" aria-hidden="true"><use href="#ico-tip"/></svg> Tips
+            <span id="tips-badge" class="count-badge" hidden>0</span>
+          </button>
+          <button id="btn-leaderboard" class="btn btn--ink btn--sm">
+            <svg class="ico" aria-hidden="true"><use href="#ico-trophy"/></svg> Stand
+          </button>
+        </div>
       </div>
       <div id="inv-list" class="koffer__items"></div>
     </div>
@@ -173,9 +291,9 @@
             <h3 id="trade-market-name" class="sheet__title">Markt</h3>
             <p id="trade-distance" class="sheet__sub"></p>
           </div>
-          <button id="trade-close" class="close" aria-label="Sluiten">✕</button>
+          <button class="close" data-close aria-label="Sluiten"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
         </div>
-        <div class="seg" role="group" aria-label="Aantal per klik">
+        <div id="trade-qty" class="seg" role="group" aria-label="Aantal per klik">
           <span class="seg__label">Aantal per klik</span>
           <button class="seg__btn" data-qty="1" aria-pressed="true">×1</button>
           <button class="seg__btn" data-qty="5" aria-pressed="false">×5</button>
@@ -192,10 +310,87 @@
         <div class="sheet__grab"></div>
         <div class="sheet__head">
           <h3 id="lb-title" class="sheet__title">Tussenstand</h3>
-          <button id="lb-close" class="close" aria-label="Sluiten">✕</button>
+          <button class="close" data-close aria-label="Sluiten"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
         </div>
         <ol id="lb-list" class="standings"></ol>
         <p class="sheet__foot">Waarde = cash + koffer tegen de gemiddelde marktprijs.</p>
+      </div>
+    </div>
+
+    <!-- Tipsmap -->
+    <div id="tips-modal" class="sheet" hidden>
+      <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="tips-title">
+        <div class="sheet__grab"></div>
+        <div class="sheet__head">
+          <h3 id="tips-title" class="sheet__title">Tipsmap</h3>
+          <button class="close" data-close aria-label="Sluiten"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
+        </div>
+        <div id="tips-tabs" class="seg" role="tablist">
+          <button class="seg__btn seg__btn--grow" data-tab="tips" role="tab" aria-pressed="true">Tips</button>
+          <button class="seg__btn seg__btn--grow" data-tab="news" role="tab" aria-pressed="false">Marktnieuws</button>
+        </div>
+        <div id="tips-body" class="stack"></div>
+      </div>
+    </div>
+
+    <!-- Tip verkopen -->
+    <div id="sell-modal" class="sheet" hidden>
+      <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="sell-title">
+        <div class="sheet__grab"></div>
+        <div class="sheet__head">
+          <h3 id="sell-title" class="sheet__title">Tip verkopen</h3>
+          <button class="close" data-close aria-label="Sluiten"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
+        </div>
+        <div id="sell-body" class="form"></div>
+      </div>
+    </div>
+
+    <!-- Tip verzinnen -->
+    <div id="craft-modal" class="sheet" hidden>
+      <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="craft-title">
+        <div class="sheet__grab"></div>
+        <div class="sheet__head">
+          <h3 id="craft-title" class="sheet__title">Tip verzinnen</h3>
+          <button class="close" data-close aria-label="Sluiten"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
+        </div>
+        <div id="craft-body" class="form"></div>
+      </div>
+    </div>
+
+    <!-- Aanbod van een andere speler -->
+    <div id="offer-modal" class="sheet" hidden>
+      <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="offer-title">
+        <div class="sheet__grab"></div>
+        <div class="sheet__head">
+          <h3 id="offer-title" class="sheet__title">Geheime tip</h3>
+          <button class="close" data-close aria-label="Sluiten"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
+        </div>
+        <div id="offer-body" class="form"></div>
+      </div>
+    </div>
+
+    <!-- Locatie -->
+    <div id="loc-modal" class="sheet" hidden>
+      <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="loc-title">
+        <div class="sheet__grab"></div>
+        <div class="sheet__head">
+          <h3 id="loc-title" class="sheet__title">Jouw locatie</h3>
+          <button class="close" data-close aria-label="Sluiten"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
+        </div>
+        <div class="form">
+          <div id="loc-status" class="loc-status"></div>
+          <div id="loc-actions" class="stack"></div>
+          <div id="loc-manual" class="stack">
+            <span class="form__label">Of zet je plek handmatig</span>
+            <button id="btn-pick-on-map" class="btn btn--ink btn--block"><svg class="ico" aria-hidden="true"><use href="#ico-pin"/></svg> Tik je plek op de kaart</button>
+            <form id="loc-search-form" class="searchbar" role="search">
+              <input id="loc-search" class="field field--light" type="search" placeholder="Adres of plek, bv. Neude Utrecht" aria-label="Zoek een adres of plek" autocomplete="off" />
+              <button class="btn btn--ink" type="submit" aria-label="Zoeken"><svg class="ico" aria-hidden="true"><use href="#ico-search"/></svg></button>
+            </form>
+            <p class="note">Handmatig spelen is zichtbaar voor de anderen in de stand.</p>
+          </div>
+          <p id="loc-manual-off" class="note" hidden>De host heeft handmatige locatie uitgezet. Alleen je GPS telt.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -215,5 +410,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="script.js"></script>
+  <script src="location.js"></script>
+  <script src="bluff.js"></script>
 </body>
 </html>
