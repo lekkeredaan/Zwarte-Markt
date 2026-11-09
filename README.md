@@ -13,7 +13,7 @@ Geen app, geen account — join op je telefoon met een **lobbycode van 6 tekens*
 4. Timer loopt af → bezit wordt verzilverd → **rijkste wint**.
 
 ## Techniek
-- Front-end: HTML + vanilla JS + CSS (mobile-first, Ravotters-huisstijl).
+- Front-end: HTML + vanilla JS + CSS (mobile-first, Ravotters-huisstijl). Tokens en componenten staan in [`DESIGN.md`](DESIGN.md).
 - Kaart: **Leaflet** + OpenStreetMap + GPS.
 - Realtime multiplayer: **Firebase Realtime Database** via REST + polling.
 - Hosting: **Vercel** → later op `zwartemarkt.ravotters.nl`.

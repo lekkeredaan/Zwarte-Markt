@@ -3,68 +3,76 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#16130E" />
   <title>Zwarte Markt</title>
-  <meta name="description" content="Zwarte Markt — reis door de stad, koop goedkoop, verkoop duur. Wie is de rijkste smokkelaar?" />
+  <meta name="description" content="Zwarte Markt: reis door de stad, koop goedkoop, verkoop duur. Wie is de rijkste smokkelaar? Een spel van Ravotters." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
   <!-- ══════════ HOME ══════════ -->
   <section id="screen-home" class="screen screen--active">
-    <div class="home-wrap">
-      <div class="logo">
-        <span class="logo__top">ZWARTE</span>
-        <span class="logo__bot">MARKT</span>
-      </div>
-      <p class="tagline">Koop goedkoop. Verkoop duur. Vertrouw niemand.</p>
+    <div class="home">
+      <span class="sticker">★ Handelen · Bluffen · Rijk worden</span>
+      <h1 class="logo" aria-label="Zwarte Markt">
+        <span class="logo__top">Zwarte</span>
+        <span class="logo__bot">Markt</span>
+      </h1>
+      <p class="tagline">Koop goedkoop. Verkoop duur.<br />Vertrouw niemand.</p>
 
-      <div class="home-actions">
-        <button id="btn-create" class="btn btn--gold btn--big">🎩 Lobby maken</button>
-        <div class="join-row">
-          <input id="input-code" class="code-input" inputmode="latin" autocapitalize="characters"
-                 maxlength="6" placeholder="CODE" aria-label="Lobbycode" />
-          <button id="btn-join" class="btn btn--emerald">Meedoen</button>
+      <div class="home__actions">
+        <button id="btn-create" class="btn btn--primary btn--lg btn--block">Lobby maken →</button>
+        <div class="divider">of doe mee met een code</div>
+        <div class="join">
+          <input id="input-code" class="field field--code" inputmode="text" autocapitalize="characters"
+                 autocomplete="off" spellcheck="false" maxlength="6" placeholder="CODE" aria-label="Lobbycode" />
+          <button id="btn-join" class="btn btn--secondary">Meedoen</button>
         </div>
-        <p id="home-error" class="error-msg" hidden></p>
+        <p id="home-error" class="alert" role="alert" hidden></p>
       </div>
 
-      <p class="credit">Een spel van <strong>Ravotters</strong></p>
+      <p id="credit" class="credit">Een spel van <strong>Ravotters</strong></p>
     </div>
   </section>
 
   <!-- ══════════ NAAM ══════════ -->
   <section id="screen-name" class="screen">
-    <div class="panel">
-      <h2 class="panel__title">Wie ben jij?</h2>
-      <p class="panel__sub">Kies je smokkelaarsnaam.</p>
-      <input id="input-name" class="text-input" maxlength="16" placeholder="bv. Sjaak de Smokkelaar" />
-      <button id="btn-name-ok" class="btn btn--gold btn--block">Verder →</button>
-      <p id="name-error" class="error-msg" hidden></p>
-      <button id="btn-name-back" class="btn btn--ghost btn--block btn--sm">← Terug</button>
+    <header class="topbar">
+      <button id="btn-name-back" class="btn btn--ghost btn--sm">← Terug</button>
+    </header>
+    <div class="page">
+      <h2 class="h1">Wie ben <mark>jij?</mark></h2>
+      <p class="lead">Kies je smokkelaarsnaam. Die zien de anderen in de lobby.</p>
+      <input id="input-name" class="field" maxlength="16" placeholder="bv. Sjaak de Smokkelaar" autocomplete="nickname" aria-label="Je naam" />
+      <button id="btn-name-ok" class="btn btn--primary btn--lg btn--block">Verder →</button>
+      <p id="name-error" class="alert" role="alert" hidden></p>
     </div>
   </section>
 
-  <!-- ══════════ BORD OPZETTEN (host) ══════════ -->
-  <section id="screen-setup" class="screen">
-    <div class="setup-head">
-      <h2 class="panel__title">Zet de markten op de kaart</h2>
-      <p class="panel__sub">Tik op de kaart om een markt te plaatsen (2–6). Plaats ze op echte plekken in jullie speelgebied.</p>
-    </div>
-    <div id="setup-map" class="map map--setup"></div>
-    <div class="setup-controls">
-      <div class="setup-markets" id="setup-market-list"></div>
+  <!-- ══════════ SPEELVELD OPZETTEN (host) ══════════ -->
+  <section id="screen-setup" class="screen screen--flex">
+    <header class="topbar">
+      <button id="btn-setup-back" class="btn btn--ghost btn--sm">← Terug</button>
+      <h2 class="topbar__title">Speelveld</h2>
+    </header>
+    <p class="setup-hint">Tik op de kaart om <strong>2 tot 6 markten</strong> te plaatsen, op echte plekken in jullie speelgebied.</p>
+    <div id="setup-map" class="setup-map"></div>
 
-      <div class="setup-options">
+    <div class="dock">
+      <div id="setup-market-list" class="chips"></div>
+      <div class="dock__tools">
+        <button id="btn-use-myloc" class="btn btn--ghost btn--sm">📍 Op mijn plek</button>
+        <button id="btn-clear-markets" class="btn btn--ghost btn--sm">Wis alles</button>
+      </div>
+      <div class="opts">
         <label class="opt">
-          <span>Startkapitaal</span>
-          <select id="opt-capital">
+          <span class="label">Startkapitaal</span>
+          <select id="opt-capital" class="select">
             <option value="300">€300</option>
             <option value="500" selected>€500</option>
             <option value="750">€750</option>
@@ -72,103 +80,138 @@
           </select>
         </label>
         <label class="opt">
-          <span>Speelduur</span>
-          <select id="opt-duration">
+          <span class="label">Speelduur</span>
+          <select id="opt-duration" class="select">
             <option value="900">15 min</option>
             <option value="1800" selected>30 min</option>
             <option value="2700">45 min</option>
             <option value="3600">60 min</option>
           </select>
         </label>
-        <label class="opt opt--check">
-          <input type="checkbox" id="opt-gps" checked />
-          <span>GPS-check aan <small>(je moet bij een markt staan om te handelen — uit = testmodus binnen)</small></span>
-        </label>
       </div>
-
-      <div class="setup-buttons">
-        <button id="btn-use-myloc" class="btn btn--ghost">📍 Markt op mijn plek</button>
-        <button id="btn-clear-markets" class="btn btn--ghost">🗑 Wis markten</button>
-      </div>
-      <button id="btn-create-lobby" class="btn btn--gold btn--block btn--big">Lobby openen →</button>
-      <p id="setup-error" class="error-msg" hidden></p>
-      <button id="btn-setup-back" class="btn btn--ghost btn--block btn--sm">← Terug</button>
+      <label class="toggle">
+        <input type="checkbox" id="opt-gps" checked />
+        <span class="toggle__text">
+          <strong>GPS-check</strong>
+          <small>Alleen handelen als je bij de markt staat. Zet uit om binnen te testen.</small>
+        </span>
+      </label>
+      <button id="btn-create-lobby" class="btn btn--primary btn--lg btn--block">Lobby openen →</button>
+      <p id="setup-error" class="alert" role="alert" hidden></p>
     </div>
   </section>
 
-  <!-- ══════════ WACHTKAMER ══════════ -->
-  <section id="screen-lobby" class="screen">
-    <div class="panel">
-      <p class="panel__sub">Deel deze code — laat vrienden 'm invoeren:</p>
-      <div class="codebox" id="lobby-code">------</div>
-      <button id="btn-copy-code" class="btn btn--ghost btn--block">📋 Kopieer code</button>
-
-      <h3 class="lobby-players-title">Handelaren (<span id="lobby-count">0</span>)</h3>
-      <ul id="lobby-players" class="player-list"></ul>
-
-      <div id="lobby-host-box" hidden>
-        <button id="btn-start-game" class="btn btn--emerald btn--block btn--big">🚀 Start de markt!</button>
-        <p class="hint">Je kunt starten zodra er minstens 2 spelers zijn.</p>
+  <!-- ══════════ LOBBY ══════════ -->
+  <section id="screen-lobby" class="screen screen--flex">
+    <header class="topbar">
+      <button id="btn-leave-lobby" class="btn btn--ghost btn--sm">← Verlaten</button>
+    </header>
+    <div class="page">
+      <h2 class="h1">De <mark>lobby</mark></h2>
+      <div class="ticket">
+        <span class="label">Lobbycode</span>
+        <div id="lobby-code" class="ticket__code">------</div>
       </div>
-      <p id="lobby-wait" class="hint" hidden>Wachten tot de host het spel start…</p>
-      <button id="btn-leave-lobby" class="btn btn--ghost btn--block btn--sm">← Verlaten</button>
+      <div class="row2">
+        <button id="btn-share-code" class="btn btn--secondary">📤 Delen</button>
+        <button id="btn-copy-code" class="btn btn--secondary">📋 Kopieer</button>
+      </div>
+      <div class="section-head">
+        <span class="label">Handelaren</span>
+        <span id="lobby-count" class="count">0</span>
+      </div>
+      <ul id="lobby-players" class="roster"></ul>
     </div>
+    <footer class="footer">
+      <div id="lobby-host-box" hidden>
+        <button id="btn-start-game" class="btn btn--primary btn--lg btn--block">Open de markt →</button>
+        <p id="start-hint" class="hint">Minstens 2 handelaren nodig.</p>
+      </div>
+      <p id="lobby-wait" class="waiting" hidden>
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        Wachten tot de host de markt opent
+      </p>
+    </footer>
   </section>
 
   <!-- ══════════ SPEL ══════════ -->
   <section id="screen-game" class="screen">
-    <div id="game-map" class="map map--game"></div>
+    <div id="game-map" class="game-map"></div>
 
-    <div class="hud-top">
-      <div class="hud-cash">
-        <span class="hud-cash__label">Cash</span>
-        <span id="hud-capital" class="hud-cash__val">€0</span>
+    <div class="hud">
+      <div class="pill cash">
+        <span class="cash__label">Cash</span>
+        <span id="hud-capital" class="cash__val">€0</span>
       </div>
-      <div id="hud-timer" class="hud-timer">--:--</div>
-      <button id="btn-recenter" class="hud-btn" title="Centreer op mij">🎯</button>
+      <div id="hud-timer" class="pill timer" aria-label="Resterende tijd">--:--</div>
+      <button id="btn-recenter" class="pill icon-btn" aria-label="Centreer op mij">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" fill="currentColor" />
+          <path d="M12 1v4M12 19v4M1 12h4M19 12h4" />
+        </svg>
+      </button>
     </div>
 
-    <div id="gps-warning" class="gps-warning" hidden>📡 Geen GPS — zet locatie aan om te handelen.</div>
+    <div id="gps-warning" class="banner" role="status" hidden>📡 Geen GPS. Zet locatie aan om te kunnen handelen.</div>
 
-    <!-- Onderste lade: inventaris -->
-    <div class="tray" id="inv-tray">
-      <div class="tray__handle"></div>
-      <h3 class="tray__title">Je koffer</h3>
-      <div id="inv-list" class="inv-list"></div>
-      <button id="btn-leaderboard" class="btn btn--ghost btn--block btn--sm">🏆 Tussenstand</button>
+    <div id="inv-tray" class="koffer">
+      <div class="koffer__head">
+        <h3 class="koffer__title">Koffer</h3>
+        <span id="inv-worth" class="koffer__worth"></span>
+        <button id="btn-leaderboard" class="btn btn--ink btn--sm">🏆 Stand</button>
+      </div>
+      <div id="inv-list" class="koffer__items"></div>
     </div>
 
-    <!-- Handelspaneel (modal) -->
-    <div id="trade-modal" class="modal" hidden>
-      <div class="modal__card">
-        <button id="trade-close" class="modal__close" aria-label="Sluiten">✕</button>
-        <h3 id="trade-market-name" class="modal__title">Markt</h3>
-        <p id="trade-distance" class="trade-distance"></p>
-        <div id="trade-goods" class="trade-goods"></div>
+    <!-- Handel -->
+    <div id="trade-modal" class="sheet" hidden>
+      <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="trade-market-name">
+        <div class="sheet__grab"></div>
+        <div class="sheet__head">
+          <span id="trade-market-num" class="num-badge">1</span>
+          <div>
+            <h3 id="trade-market-name" class="sheet__title">Markt</h3>
+            <p id="trade-distance" class="sheet__sub"></p>
+          </div>
+          <button id="trade-close" class="close" aria-label="Sluiten">✕</button>
+        </div>
+        <div class="seg" role="group" aria-label="Aantal per klik">
+          <span class="seg__label">Aantal per klik</span>
+          <button class="seg__btn" data-qty="1" aria-pressed="true">×1</button>
+          <button class="seg__btn" data-qty="5" aria-pressed="false">×5</button>
+          <button class="seg__btn" data-qty="10" aria-pressed="false">×10</button>
+        </div>
+        <div id="trade-goods" class="ledger"></div>
+        <p class="sheet__foot">Het label vergelijkt de prijs met het gemiddelde van alle markten.</p>
       </div>
     </div>
 
-    <!-- Tussenstand (modal) -->
-    <div id="lb-modal" class="modal" hidden>
-      <div class="modal__card">
-        <button id="lb-close" class="modal__close" aria-label="Sluiten">✕</button>
-        <h3 class="modal__title">🏆 Tussenstand</h3>
-        <ol id="lb-list" class="lb-list"></ol>
+    <!-- Stand -->
+    <div id="lb-modal" class="sheet" hidden>
+      <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="lb-title">
+        <div class="sheet__grab"></div>
+        <div class="sheet__head">
+          <h3 id="lb-title" class="sheet__title">Tussenstand</h3>
+          <button id="lb-close" class="close" aria-label="Sluiten">✕</button>
+        </div>
+        <ol id="lb-list" class="standings"></ol>
+        <p class="sheet__foot">Waarde = cash + koffer tegen de gemiddelde marktprijs.</p>
       </div>
     </div>
   </section>
 
   <!-- ══════════ EINDE ══════════ -->
   <section id="screen-end" class="screen">
-    <div class="panel panel--center">
-      <h2 class="end-title">💰 De markt sluit!</h2>
-      <div id="end-winner" class="end-winner"></div>
-      <ol id="end-list" class="lb-list"></ol>
-      <button id="btn-home" class="btn btn--gold btn--block btn--big">Opnieuw</button>
+    <div class="page page--end">
+      <span class="sticker">★ De markt is gesloten</span>
+      <div id="end-winner" class="winner"></div>
+      <span class="label">Eindstand</span>
+      <ol id="end-list" class="standings"></ol>
+      <button id="btn-home" class="btn btn--primary btn--lg btn--block">Nog een potje →</button>
     </div>
   </section>
 
-  <div id="toast" class="toast" hidden></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="script.js"></script>

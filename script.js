@@ -12,10 +12,10 @@ const isLocal = !DB_URL;
 
 // ── Constanten ────────────────────────────────────────────────────
 const GOODS = [
-  { id: 'horloges', name: 'Namaakhorloges',  emoji: '⌚', base: 60  },
-  { id: 'kruiden',  name: 'Exotische kruiden', emoji: '🌿', base: 25  },
-  { id: 'munten',   name: 'Zeldzame munten',   emoji: '🪙', base: 120 },
-  { id: 'sigaren',  name: 'Smokkelsigaren',    emoji: '🚬', base: 40  },
+  { id: 'horloges', name: 'Namaakhorloges',    short: 'Horloges', emoji: '⌚', base: 60  },
+  { id: 'kruiden',  name: 'Exotische kruiden', short: 'Kruiden',  emoji: '🌿', base: 25  },
+  { id: 'munten',   name: 'Zeldzame munten',   short: 'Munten',   emoji: '🪙', base: 120 },
+  { id: 'sigaren',  name: 'Smokkelsigaren',    short: 'Sigaren',  emoji: '🚬', base: 40  },
 ];
 const GOOD = Object.fromEntries(GOODS.map(g => [g.id, g]));
 
@@ -38,7 +38,7 @@ let marketLayer = null, meMarker = null;
 let myPos = null;             // {lat,lng}
 let pollTimer = null, tickTimer = null, clockTimer = null, geoWatch = null;
 let activeMarketId = null;    // open handelspaneel
-let tradeQty = {};            // per good id gekozen aantal in paneel
+let tradeQty = 1;             // gekozen aantal per klik (×1 / ×5 / ×10)
 let endedShown = false;
 const setupMarkerLayer = { layer: null };
 
@@ -213,16 +213,22 @@ function renderLobby() {
   if (!game) return;
   const players = Object.entries(game.players || {});
   $('lobby-count').textContent = players.length;
-  const ul = $('lobby-players');
-  ul.innerHTML = '';
-  for (const [pid, p] of players) {
-    const li = document.createElement('li');
-    li.innerHTML = `<span>🕵️ ${escapeHtml(p.name || '???')}</span>` +
-      (p.isHost ? `<span class="host-badge">HOST</span>` : '');
-    ul.appendChild(li);
-  }
+  $('lobby-players').innerHTML = players.map(([pid, p]) => {
+    const name = p.name || '???';
+    const isMe = pid === me.pid;
+    return `<li class="${isMe ? 'is-me' : ''}">
+      <span class="avatar" aria-hidden="true">${escapeHtml(name.trim().charAt(0).toUpperCase() || '?')}</span>
+      <span>${escapeHtml(name)}${isMe ? ' <small>(jij)</small>' : ''}</span>
+      ${p.isHost ? '<span class="tag">Host</span>' : ''}
+    </li>`;
+  }).join('');
+  const enough = players.length >= 2 || isLocal;
   const startBtn = $('btn-start-game');
-  if (startBtn) startBtn.disabled = players.length < 2 && !isLocal ? true : false;
+  if (startBtn) startBtn.disabled = !enough;
+  const hint = $('start-hint');
+  if (hint) hint.textContent = enough
+    ? `${players.length} handelaren binnen. Iedereen er? Open de markt.`
+    : 'Wacht op minstens 2 handelaren om te starten.';
 }
 
 function escapeHtml(s) {
@@ -271,7 +277,8 @@ function initGameMap() {
   const ms = Object.values(game.markets || {});
   if (ms.length) {
     const bounds = L.latLngBounds(ms.map(m => [m.lat, m.lng]));
-    gameMap.fitBounds(bounds, { padding: [60, 60], maxZoom: 17 });
+    // ruimte laten voor HUD (boven) en koffer (onder)
+    gameMap.fitBounds(bounds, { paddingTopLeft: [50, 110], paddingBottomRight: [50, 190], maxZoom: 17 });
   } else {
     gameMap.setView(NL_CENTER, 13);
   }
@@ -283,17 +290,25 @@ function drawMarkets() {
   if (!marketLayer) return;
   marketLayer.clearLayers();
   for (const [id, m] of Object.entries(game.markets || {})) {
-    const near = canTradeAt(id);
-    const icon = L.divIcon({
-      className: '', html: `<div class="mk ${near ? 'mk--near' : ''}">🏷️</div>`,
-      iconSize: [44, 44], iconAnchor: [22, 44],
-    });
-    const mk = L.marker([m.lat, m.lng], { icon }).addTo(marketLayer);
+    const icon = marketIcon(marketNum(id), m.name, canTradeAt(id));
+    const mk = L.marker([m.lat, m.lng], { icon, title: m.name }).addTo(marketLayer);
     mk.on('click', () => openTrade(id));
-    L.tooltip({ permanent: true, direction: 'top', offset: [0, -42], className: 'mk-label' })
-      .setContent(m.name).setLatLng([m.lat, m.lng]).addTo(marketLayer);
   }
 }
+
+// Markt-marker: druppel-pin met nummer + naamlabel (zie DESIGN.md › Markt-marker)
+function marketIcon(num, name, near) {
+  return L.divIcon({
+    className: 'mk-wrap',
+    html: `<div class="mk ${near ? 'mk--near' : ''}">
+             <div class="mk__pin"><span class="mk__num">${num}</span></div>
+             <div class="mk__name">${escapeHtml(name)}</div>
+           </div>`,
+    iconSize: [150, 84],
+    iconAnchor: [75, 52],
+  });
+}
+function marketNum(id) { return (parseInt(String(id).replace(/\D/g, ''), 10) || 0) + 1; }
 
 function canTradeAt(id) {
   const m = game.markets?.[id];
@@ -324,7 +339,7 @@ function startGeolocation() {
 
 function updateMeMarker() {
   if (!gameMap || !myPos) return;
-  const icon = L.divIcon({ className: '', html: '<div class="me-dot"></div>', iconSize: [20, 20], iconAnchor: [10, 10] });
+  const icon = L.divIcon({ className: 'mk-wrap', html: '<div class="me"></div>', iconSize: [22, 22], iconAnchor: [11, 11] });
   if (!meMarker) meMarker = L.marker([myPos.lat, myPos.lng], { icon, zIndexOffset: 1000 }).addTo(gameMap);
   else meMarker.setLatLng([myPos.lat, myPos.lng]);
 }
@@ -341,7 +356,7 @@ function tickClock() {
   const s = Math.floor(remain / 1000);
   const el = $('hud-timer');
   el.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-  el.classList.toggle('low', s <= 60);
+  el.classList.toggle('is-low', s <= 60);
   if (remain <= 0) {
     if (me.isHost && !isLocal) fbPatch(`games/${code}`, { status: 'ended' }).catch(() => {});
     if (game) game.status = 'ended';
@@ -359,6 +374,7 @@ function startPriceTick() {
       try { await fbPut(`games/${code}/markets`, game.markets); } catch (e) { /* stil, volgende tick */ }
     } else {
       drawMarkets();
+      renderGame();
       if (activeMarketId) renderTrade();
     }
   }, PRICE_TICK_MS);
@@ -376,99 +392,90 @@ function renderGame() {
   renderInventory();
 }
 
+// Koffer: chips per goed + geschatte waarde (zie DESIGN.md › Koffer)
 function renderInventory() {
-  const p = myPlayer();
-  const list = $('inv-list');
-  list.innerHTML = '';
-  const inv = p?.inv || {};
+  const inv = myPlayer()?.inv || {};
   const owned = GOODS.filter(g => (inv[g.id] || 0) > 0);
-  if (!owned.length) {
-    list.innerHTML = '<div class="inv-empty">Lege koffer — koop iets op een markt!</div>';
-    return;
-  }
-  for (const g of owned) {
-    const row = document.createElement('div');
-    row.className = 'inv-row';
-    row.innerHTML = `<span class="emoji">${g.emoji}</span><span>${g.name}</span><span class="qty">${inv[g.id]}×</span>`;
-    list.appendChild(row);
-  }
+  const worth = owned.reduce((sum, g) => sum + inv[g.id] * avgPrice(g.id), 0);
+  $('inv-worth').textContent = owned.length ? `≈ ${euro(worth)}` : '';
+  $('inv-list').innerHTML = owned.length
+    ? owned.map(g => `<span class="item"><span aria-hidden="true">${g.emoji}</span>${inv[g.id]}× ${g.short}</span>`).join('')
+    : '<p class="koffer__empty">Leeg. Tik op een markt om te handelen.</p>';
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  Handelspaneel
+//  Handelspaneel (grootboek)
 // ══════════════════════════════════════════════════════════════════
 function openTrade(id) {
   activeMarketId = id;
-  tradeQty = {};
   $('trade-modal').hidden = false;
   renderTrade();
 }
 function closeTrade() { activeMarketId = null; $('trade-modal').hidden = true; }
 
+// Prijs t.o.v. het gemiddelde van alle markten → deal-label
+function dealInfo(gid, price) {
+  const pct = Math.round((price / avgPrice(gid) - 1) * 100);
+  if (pct <= -5) return { cls: 'low',  text: `${pct}% · goedkoop` };
+  if (pct >= 5)  return { cls: 'high', text: `+${pct}% · duur` };
+  return { cls: 'mid', text: '≈ gemiddeld' };
+}
+
 function renderTrade() {
   const id = activeMarketId;
-  const m = game.markets?.[id];
+  const m = game?.markets?.[id];
   if (!m) return;
   $('trade-market-name').textContent = m.name;
+  $('trade-market-num').textContent = marketNum(id);
 
   const near = canTradeAt(id);
   const distEl = $('trade-distance');
+  let far = false;
   if (!game.config?.gpsCheck) {
-    distEl.textContent = '🧪 Testmodus — handelen overal toegestaan';
-    distEl.className = 'trade-distance';
+    distEl.textContent = 'Testmodus: overal handelen toegestaan';
   } else if (!myPos) {
-    distEl.textContent = '📡 Wachten op GPS…';
-    distEl.className = 'trade-distance far';
+    distEl.textContent = 'Wachten op je GPS-locatie…';
+    far = true;
   } else {
     const d = Math.round(haversine(myPos, { lat: m.lat, lng: m.lng }));
-    distEl.textContent = near ? `✅ Je staat bij deze markt (${d} m)` : `🚶 Loop dichterbij — nog ${d} m`;
-    distEl.className = 'trade-distance' + (near ? '' : ' far');
+    distEl.textContent = near ? `Je staat bij deze markt (${d} m)` : `Loop dichterbij: nog ${d} m`;
+    far = !near;
   }
+  distEl.className = 'sheet__sub' + (far ? ' is-far' : '');
+
+  document.querySelectorAll('.seg__btn').forEach(b =>
+    b.setAttribute('aria-pressed', String(Number(b.dataset.qty) === tradeQty)));
 
   const p = myPlayer();
-  const cont = $('trade-goods');
-  cont.innerHTML = '';
-  for (const g of GOODS) {
+  const qty = tradeQty;
+  $('trade-goods').innerHTML = GOODS.map(g => {
     const price = m.prices?.[g.id] ?? g.base;
     const prev = m.prev?.[g.id] ?? price;
     const trend = price > prev ? 'up' : (price < prev ? 'down' : '');
     const owned = p?.inv?.[g.id] || 0;
-    const qty = tradeQty[g.id] || 1;
-
-    const el = document.createElement('div');
-    el.className = 'good';
-    el.innerHTML = `
-      <div class="good__head">
-        <span class="good__emoji">${g.emoji}</span>
-        <div>
-          <div class="good__name">${g.name}</div>
-          <div class="good__owned">In koffer: ${owned}×</div>
+    const deal = dealInfo(g.id, price);
+    const canBuy = near && (p?.capital || 0) >= price * qty;
+    const canSell = near && owned >= qty;
+    return `
+      <div class="row">
+        <div class="row__top">
+          <span class="row__icon" aria-hidden="true">${g.emoji}</span>
+          <div>
+            <div class="row__name">${g.name}</div>
+            <div class="row__meta">In koffer: <strong>${owned}</strong>${trend ? ` · <span class="trend-${trend}">${trend === 'up' ? '▲ stijgt' : '▼ daalt'}</span>` : ''}</div>
+          </div>
+          <div class="row__price">
+            <div class="price">${euro(price)}</div>
+            <span class="deal deal--${deal.cls}">${deal.text}</span>
+            ${qty > 1 ? `<div class="row__total">×${qty} = ${euro(price * qty)}</div>` : ''}
+          </div>
         </div>
-        <div class="good__price">
-          <div class="amt">${euro(price)}</div>
-          <div class="good__trend ${trend}">${trend === 'up' ? '▲ stijgt' : trend === 'down' ? '▼ daalt' : '– stabiel'}</div>
+        <div class="row__actions">
+          <button class="btn btn--ink" data-act="buy" data-g="${g.id}" ${canBuy ? '' : 'disabled'}>Koop ${qty}</button>
+          <button class="btn btn--gain" data-act="sell" data-g="${g.id}" ${canSell ? '' : 'disabled'}>Verkoop ${qty}</button>
         </div>
-      </div>
-      <div class="qtybar">
-        <button data-act="minus" data-g="${g.id}">−</button>
-        <span class="q" id="q-${g.id}">${qty}</span>
-        <button data-act="plus" data-g="${g.id}">+</button>
-        <span style="margin-left:auto;font-weight:900">${euro(price * qty)}</span>
-      </div>
-      <div class="good__btns">
-        <button class="btn btn--emerald" data-act="buy" data-g="${g.id}" ${near ? '' : 'disabled'}>Koop ${qty}×</button>
-        <button class="btn btn--gold" data-act="sell" data-g="${g.id}" ${near && owned > 0 ? '' : 'disabled'}>Verkoop ${qty}×</button>
       </div>`;
-    cont.appendChild(el);
-  }
-}
-
-function changeQty(gid, delta) {
-  const cur = tradeQty[gid] || 1;
-  tradeQty[gid] = clamp(cur + delta, 1, 99);
-  const q = $('q-' + gid);
-  if (q) q.textContent = tradeQty[gid];
-  renderTrade();
+  }).join('');
 }
 
 async function doTrade(gid, kind) {
@@ -478,39 +485,30 @@ async function doTrade(gid, kind) {
   const p = myPlayer();
   if (!m || !p) return;
   const price = m.prices?.[gid] ?? GOOD[gid].base;
-  const qty = tradeQty[gid] || 1;
+  const qty = tradeQty;
+  const total = price * qty;
+  const have = p.inv?.[gid] || 0;
 
-  // knop-herstel via try/finally
-  const btns = document.querySelectorAll(`#trade-goods .btn[data-g="${gid}"]`);
-  btns.forEach(b => b.disabled = true);
+  if (kind === 'buy' && p.capital < total) { toast('Te weinig cash', 'bad'); return; }
+  if (kind === 'sell' && have < qty) { toast('Zoveel heb je niet', 'bad'); return; }
+
+  // Nieuwe stand eerst uitrekenen, pas lokaal doorvoeren als opslaan gelukt is
+  const inv = { ...(p.inv || {}) };
+  const capital = kind === 'buy' ? p.capital - total : p.capital + total;
+  inv[gid] = kind === 'buy' ? have + qty : have - qty;
+  if (inv[gid] === 0) delete inv[gid];
+
+  document.querySelectorAll('#trade-goods .btn').forEach(b => b.disabled = true);
   try {
-    const inv = { ...(p.inv || {}) };
-    if (kind === 'buy') {
-      const cost = price * qty;
-      if (p.capital < cost) { toast('Te weinig cash', 'bad'); return; }
-      p.capital -= cost;
-      inv[gid] = (inv[gid] || 0) + qty;
-      toast(`Gekocht: ${qty}× ${GOOD[gid].emoji} voor ${euro(cost)}`, 'good');
-    } else {
-      const have = p.inv?.[gid] || 0;
-      if (have < qty) { toast('Zoveel heb je niet', 'bad'); return; }
-      const gain = price * qty;
-      p.capital += gain;
-      inv[gid] = have - qty;
-      if (inv[gid] === 0) delete inv[gid];
-      toast(`Verkocht: ${qty}× ${GOOD[gid].emoji} voor ${euro(gain)}`, 'good');
-    }
+    if (!isLocal) await fbPatch(`games/${code}/players/${me.pid}`, { capital, inv });
+    p.capital = capital;
     p.inv = inv;
-    if (!isLocal) {
-      await fbPatch(`games/${code}/players/${me.pid}`, { capital: p.capital, inv: inv });
-    }
+    toast(`${kind === 'buy' ? 'Gekocht' : 'Verkocht'}: ${qty}× ${GOOD[gid].emoji} voor ${euro(total)}`, 'good');
     renderGame();
-    renderTrade();
   } catch (e) {
-    toast(e.message || 'Handelen mislukt', 'bad');
+    toast(e.message || 'Handelen mislukt, probeer opnieuw', 'bad');
   } finally {
-    btns.forEach(b => b.disabled = false);
-    renderTrade();   // herstelt knopstatus correct
+    renderTrade();   // bouwt de knoppen opnieuw op met de juiste status
   }
 }
 
@@ -534,14 +532,14 @@ function standings() {
     .sort((a, b) => b.worth - a.worth);
 }
 function renderLeaderboardInto(elId) {
-  const ol = $(elId);
-  ol.innerHTML = '';
-  for (const s of standings()) {
-    const li = document.createElement('li');
-    if (s.pid === me.pid) li.className = 'me';
-    li.innerHTML = `<span>${escapeHtml(s.name)}</span><span class="lb-worth">${euro(s.worth)}</span>`;
-    ol.appendChild(li);
-  }
+  $(elId).innerHTML = standings().map((s, i) => {
+    const isMe = s.pid === me.pid;
+    return `<li class="${isMe ? 'is-me' : ''}">
+      <span class="rank">${i === 0 ? '👑' : i + 1}</span>
+      <span>${escapeHtml(s.name)}${isMe ? ' <small>(jij)</small>' : ''}</span>
+      <span class="worth">${euro(s.worth)}</span>
+    </li>`;
+  }).join('');
 }
 function openLeaderboard() { renderLeaderboardInto('lb-list'); $('lb-modal').hidden = false; }
 
@@ -557,8 +555,10 @@ function endGame() {
   const winner = st[0];
   const box = $('end-winner');
   if (winner) {
-    box.innerHTML = `<span class="ew-name">🏆 ${escapeHtml(winner.name)}</span>
-      <span class="ew-worth">rijkste smokkelaar — ${euro(winner.worth)}</span>`;
+    box.innerHTML = `<span class="winner__crown" aria-hidden="true">👑</span>
+      <span class="winner__label">Rijkste smokkelaar</span>
+      <span class="winner__name">${escapeHtml(winner.name)}</span>
+      <span class="winner__worth">${euro(winner.worth)}</span>`;
   }
   renderLeaderboardInto('end-list');
 }
@@ -645,22 +645,26 @@ function drawSetupMarkers() {
   const lay = setupMarkerLayer.layer;
   if (!lay) return;
   lay.clearLayers();
-  setupMarkets.forEach(m => {
-    const icon = L.divIcon({ className: '', html: '<div class="mk">🏷️</div>', iconSize: [44, 44], iconAnchor: [22, 44] });
-    L.marker([m.lat, m.lng], { icon }).addTo(lay);
+  setupMarkets.forEach((m, i) => {
+    L.marker([m.lat, m.lng], { icon: marketIcon(i + 1, m.name, false) }).addTo(lay);
   });
 }
 function renderSetupMarkets() {
-  const box = $('setup-market-list');
-  box.innerHTML = '';
-  setupMarkets.forEach((m, i) => {
-    const chip = document.createElement('span');
-    chip.className = 'chip';
-    chip.innerHTML = `🏷️ ${escapeHtml(m.name)} <button data-i="${i}" aria-label="verwijderen">✕</button>`;
-    box.appendChild(chip);
-  });
+  $('setup-market-list').innerHTML = setupMarkets.length
+    ? setupMarkets.map((m, i) => `
+        <span class="chip">
+          <span class="chip__num">${i + 1}</span>${escapeHtml(m.name)}
+          <button class="chip__x" data-i="${i}" aria-label="Verwijder ${escapeHtml(m.name)}">✕</button>
+        </span>`).join('')
+    : '<p class="chips__empty">Nog geen markten. Tik op de kaart.</p>';
   const btn = $('btn-create-lobby');
-  if (btn) btn.disabled = setupMarkets.length < MIN_MARKETS;
+  if (btn) {
+    const missing = MIN_MARKETS - setupMarkets.length;
+    btn.disabled = missing > 0;
+    btn.textContent = missing > 0
+      ? `Plaats nog ${missing} ${missing === 1 ? 'markt' : 'markten'}`
+      : 'Lobby openen →';
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -718,8 +722,19 @@ function bind() {
 
   // LOBBY
   $('btn-start-game').addEventListener('click', startGame);
-  $('btn-copy-code').addEventListener('click', () => {
-    navigator.clipboard?.writeText(code).then(() => toast('Code gekopieerd', 'good'), () => {});
+  $('btn-copy-code').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(code); toast('Code gekopieerd', 'good'); }
+    catch (e) { toast(`Kopiëren lukte niet. De code is ${code}`, 'bad'); }
+  });
+  $('btn-share-code').addEventListener('click', async () => {
+    const text = `Doe mee met Zwarte Markt! Lobbycode: ${code}`;
+    const url = location.origin;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Zwarte Markt', text, url }); return; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); toast('Uitnodiging gekopieerd, plak hem in de groepsapp', 'good'); }
+    catch (e) { toast(`Delen lukte niet. De code is ${code}`, 'bad'); }
   });
   $('btn-leave-lobby').addEventListener('click', leaveToHome);
 
@@ -733,19 +748,24 @@ function bind() {
   $('trade-goods').addEventListener('click', e => {
     const b = e.target.closest('button[data-act]');
     if (!b) return;
-    const gid = b.dataset.g, act = b.dataset.act;
-    if (act === 'plus') changeQty(gid, 1);
-    else if (act === 'minus') changeQty(gid, -1);
-    else if (act === 'buy') doTrade(gid, 'buy');
-    else if (act === 'sell') doTrade(gid, 'sell');
+    if (b.dataset.act === 'buy') doTrade(b.dataset.g, 'buy');
+    else if (b.dataset.act === 'sell') doTrade(b.dataset.g, 'sell');
+  });
+  document.querySelector('#trade-modal .seg').addEventListener('click', e => {
+    const b = e.target.closest('.seg__btn');
+    if (!b) return;
+    tradeQty = Number(b.dataset.qty) || 1;
+    renderTrade();
+  });
+  // Escape sluit open sheets (toetsenbord / desktop)
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (!$('trade-modal').hidden) closeTrade();
+    $('lb-modal').hidden = true;
   });
 
   // EINDE
   $('btn-home').addEventListener('click', leaveToHome);
-
-  // tray toggle (tik op handle)
-  const tray = $('inv-tray');
-  tray.querySelector('.tray__handle').addEventListener('click', () => tray.classList.toggle('open'));
 }
 
 function showHomeError(msg) { const e = $('home-error'); e.textContent = msg; e.hidden = false; }
