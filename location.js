@@ -61,6 +61,7 @@ async function setManualPos(lat, lng, label) {
   if (!myPlayer()?.manualLoc) {
     try { await fbUpdate({ [`players/${me.pid}/manualLoc`]: true }); } catch (e) { /* volgende keer opnieuw */ }
   }
+  saveSession();
 }
 
 async function useGps() {
@@ -70,6 +71,7 @@ async function useGps() {
   renderLocationChrome();
   toast(myPos ? 'Je locatie volgt weer je GPS' : 'Terug naar GPS. Wachten op signaal…', 'good');
   try { await fbUpdate({ [`players/${me.pid}/manualLoc`]: null }); } catch (e) { /* niet erg */ }
+  saveSession();
 }
 
 function startPicking() {

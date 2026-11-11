@@ -135,6 +135,14 @@
       <p class="tagline">Koop goedkoop. Verkoop duur.<br />Vertrouw niemand.</p>
 
       <div class="home__actions">
+        <div id="resume-box" class="resume" hidden>
+          <div class="resume__text">
+            <span class="resume__label">Je zat nog in een potje</span>
+            <span id="resume-what" class="resume__what"></span>
+          </div>
+          <button id="btn-resume" class="btn btn--gain btn--sm">Verder spelen</button>
+          <button id="btn-resume-forget" class="close" aria-label="Vergeet dit potje"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
+        </div>
         <button id="btn-create" class="btn btn--primary btn--lg btn--block">Lobby maken →</button>
         <div class="divider">of doe mee met een code</div>
         <div class="join">
@@ -490,5 +498,6 @@
   <script src="bluff.js"></script>
   <script src="teams.js"></script>
   <script src="risk.js"></script>
+  <script src="session.js"></script>
 </body>
 </html>

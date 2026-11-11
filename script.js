@@ -1,7 +1,8 @@
 /* ══════════════════════════════════════════════════════════════
    ZWARTE MARKT — kernlogica
    Realtime via Firebase RTDB (REST + polling). Zonder DB_URL = lokale testmodus.
-   Zie ook: location.js (GPS / handmatige locatie) en bluff.js (tips, schokken).
+   Zie ook: location.js (GPS / handmatige locatie), bluff.js (tips, schokken),
+   teams.js, risk.js en session.js (terugkomen na herladen).
    ══════════════════════════════════════════════════════════════ */
 
 // ── Firebase config ───────────────────────────────────────────────
@@ -274,6 +275,7 @@ function enterLobby() {
   $('lobby-wait').hidden = me.isHost;
   renderLobby();
   startPolling();
+  saveSession();   // session.js: na herladen terug in deze lobby
 }
 
 // Eén rij in een spelerslijst (ook gebruikt door de teamlobby)
@@ -337,6 +339,8 @@ function enterGame() {
   if (me.isHost) startHostLoop();
   renderGame();
   syncBluff();
+  if (myPos) onMyPosChanged();   // plek die er al was (handmatig, of hersteld na herladen) meteen tonen
+  saveSession();
 }
 
 function initGameMap() {
@@ -439,6 +443,7 @@ async function hostTick() {
   updates.markets = game.markets;
   try { await fbUpdate(updates); } catch (e) { /* stil: volgende tick opnieuw */ }
   if (isLocal) { drawMarkets(); renderGame(); if (activeMarketId) renderTrade(); syncBluff(); }
+  saveSession();   // schokkenplan van de host overleeft zo een herlaadbeurt
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -777,6 +782,7 @@ async function onSetupSearch(e) {
 //  Verlaten / reset
 // ══════════════════════════════════════════════════════════════════
 function leaveToHome() {
+  if (game) forgetSession();   // bewust weggaan: niet meer aanbieden om verder te spelen
   stopTimers();
   stopPicking();
   closeAllSheets();
@@ -790,6 +796,7 @@ function leaveToHome() {
   resetTeams();
   resetRisk();
   showScreen('screen-home');
+  renderResumeOffer();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -902,6 +909,7 @@ function bind() {
   bindLocation();   // location.js
   bindBluff();      // bluff.js
   bindTeams();      // teams.js
+  bindSession();    // session.js
 }
 
 function showHomeError(msg) { const e = $('home-error'); e.textContent = msg; e.hidden = false; }
@@ -946,4 +954,5 @@ document.addEventListener('DOMContentLoaded', () => {
     const c = $('credit');
     if (c) c.innerHTML += ' · <em>lokale testmodus</em>';
   }
+  initSession();    // session.js: terug in je potje na herladen
 });

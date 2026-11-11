@@ -331,7 +331,7 @@ function sharePos() {
 }
 // Na afloop de gedeelde plek weer wissen (geen locaties bewaren)
 function clearSharedPos() {
-  if (!teamMode() || !lastShare.pos) return;
+  if (!teamMode() || !(lastShare.pos || myPlayer()?.pos)) return;
   fbUpdate({ [`players/${me.pid}/pos`]: null }).catch(() => {});
 }
 

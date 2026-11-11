@@ -109,6 +109,9 @@ Eén stapel onder de HUD, in deze volgorde:
 - `.row__actions--one`: één brede actieknop per goed. Kan het niet, dan staat de reden op de (gestippelde) knop: "Te weinig cash", "De douane let nog op je".
 - Alles wat elke seconde verandert (aftellen) staat in `#trade-status`, los van de knoppen in `#trade-goods`. Zo vallen tikken niet weg.
 
+### Verder spelen `.resume` (startscherm)
+Crème kaart boven "Lobby maken", alleen zichtbaar als dit toestel nog een potje kent: kop in Anton ("Je zat nog in een potje"), daaronder lobbycode en bijnaam op één regel, rechts een ronde sluitknop (`.close`, "Vergeet dit potje") en eronder één brede groene knop **Verder spelen**. Tijdens het ophalen staat er "Bezig…" en zijn beide knoppen uit.
+
 ### Overig
 - `.ticket`: de lobbycode als smokkelticket (geel, roze schaduw, ponsgaten).
 - `.roster` / `.standings`: pil-rijen met avatar-initiaal of rang; jezelf in geel. `.tag--soft` "handmatig" achter een naam.
