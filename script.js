@@ -39,6 +39,7 @@ let myPos = null;             // {lat,lng}: GPS of handmatig (zie location.js)
 let pollTimer = null, tickTimer = null, clockTimer = null, geoWatch = null;
 let activeMarketId = null;    // open handelspaneel
 let tradeQty = 1;             // aantal per klik (×1 / ×5 / ×10)
+let tradeTab = 'trade';       // 'trade' | 'ship' | 'customs' (zie risk.js)
 let endedShown = false;
 let localMe = null;           // {capital, inv, at}: laatste eigen schrijfactie
 const setupMarkerLayer = { layer: null };
@@ -82,7 +83,9 @@ let toastTimer = null;
 function toast(msg, kind) {
   const t = $('toast');
   t.textContent = msg;
-  t.className = 'toast' + (kind ? ' ' + kind : '');
+  // Is er een paneel open? Dan bovenin tonen, zodat de melding niet over de knoppen valt
+  const sheetOpen = !!document.querySelector('.sheet:not([hidden])');
+  t.className = 'toast' + (kind ? ' ' + kind : '') + (sheetOpen ? ' toast--top' : '');
   t.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
@@ -151,6 +154,14 @@ async function writeMe(fields, extra = {}) {
   const p = myPlayer();
   localMe = { capital: p?.capital, inv: p?.inv || {}, at: Date.now() };
 }
+// Alles wat mijn kas of koffer leest-en-schrijft loopt via deze wachtrij, één voor één.
+// Zo overschrijven een aankoop, een binnenkomende zending en een gift elkaar nooit.
+let meQueue = Promise.resolve();
+function withMe(fn) {
+  const run = meQueue.then(fn);
+  meQueue = run.catch(() => {});
+  return run;
+}
 
 // ══════════════════════════════════════════════════════════════════
 //  Prijs-engine
@@ -205,18 +216,19 @@ async function createLobby() {
   const duration = parseInt($('opt-duration').value, 10);
   const gpsCheck = $('opt-gps').checked;
   const allowManualLocation = $('opt-manual').checked;
+  const teamSize = parseInt($('opt-teams').value, 10) || 0;
 
   const markets = setupMarkets.map((m, i) => ({ id: 'm' + i, name: m.name, lat: m.lat, lng: m.lng }));
 
+  const host = { name: me.name, capital, inv: {}, isHost: true, joinedAt: Date.now() };
+  if (teamSize) host.team = TEAMS[0].id;
   const newGame = {
     status: 'lobby',
     hostId: me.pid,
     createdAt: Date.now(),
-    config: { startCapital: capital, durationSec: duration, gpsCheck, allowManualLocation },
+    config: { startCapital: capital, durationSec: duration, gpsCheck, allowManualLocation, teamSize },
     markets: buildMarketsNode(markets),
-    players: {
-      [me.pid]: { name: me.name, capital, inv: {}, isHost: true, joinedAt: Date.now() },
-    },
+    players: { [me.pid]: host },
   };
 
   if (isLocal) {
@@ -244,10 +256,10 @@ async function joinLobby(enteredCode) {
   game = g;
   me.isHost = (g.hostId === me.pid);
   const startCap = g.config?.startCapital ?? 500;
-  await fbPatch(`games/${code}/players/${me.pid}`, {
-    name: me.name, capital: startCap, inv: {}, joinedAt: Date.now(),
-  });
-  game.players = { ...(game.players || {}), [me.pid]: { name: me.name, capital: startCap, inv: {} } };
+  const mine = { name: me.name, capital: startCap, inv: {}, joinedAt: Date.now() };
+  if (teamMode()) mine.team = smallestTeamId(g.players, Object.keys(g.players || {}).length + 1);
+  await fbPatch(`games/${code}/players/${me.pid}`, mine);
+  game.players = { ...(game.players || {}), [me.pid]: mine };
   if (g.status === 'playing') { startPolling(); enterGame(); return; }
   enterLobby();
 }
@@ -264,26 +276,32 @@ function enterLobby() {
   startPolling();
 }
 
-function renderLobby() {
-  if (!game) return;
-  const players = Object.entries(game.players || {});
-  $('lobby-count').textContent = players.length;
-  setHtml('lobby-players', players.map(([pid, p]) => {
-    const name = p.name || '???';
-    const isMe = pid === me.pid;
-    return `<li class="${isMe ? 'is-me' : ''}">
+// Eén rij in een spelerslijst (ook gebruikt door de teamlobby)
+function rosterLi([pid, p]) {
+  const name = p.name || '???';
+  const isMe = pid === me.pid;
+  return `<li class="${isMe ? 'is-me' : ''}">
       <span class="avatar" aria-hidden="true">${escapeHtml(name.trim().charAt(0).toUpperCase() || '?')}</span>
       <span>${escapeHtml(name)}${isMe ? ' <small>(jij)</small>' : ''}</span>
       ${p.isHost ? '<span class="tag">Host</span>' : ''}
     </li>`;
-  }).join(''));
+}
+
+function renderLobby() {
+  if (!game) return;
+  const players = Object.entries(game.players || {});
+  const teams = teamMode();
+  $('lobby-count').textContent = players.length;
+  $('lobby-label').textContent = teams ? `Teams van ${teamSize()}` : 'Handelaren';
+  $('btn-shuffle').hidden = !(teams && me.isHost);
+  setHtml('lobby-players', teams ? lobbyTeamsHtml() : `<ul class="roster">${players.map(rosterLi).join('')}</ul>`);
   const enough = players.length >= 2 || isLocal;
   const startBtn = $('btn-start-game');
   if (startBtn) startBtn.disabled = !enough;
   const hint = $('start-hint');
-  if (hint) hint.textContent = enough
-    ? `${players.length} handelaren binnen. Iedereen er? Open de markt.`
-    : 'Wacht op minstens 2 handelaren om te starten.';
+  if (hint) hint.textContent = !enough ? 'Wacht op minstens 2 handelaren om te starten.'
+    : teams ? `${players.length} handelaren in ${teamCount(players.length)} teams. Iedereen er? Open de markt.`
+    : `${players.length} handelaren binnen. Iedereen er? Open de markt.`;
 }
 
 async function startGame() {
@@ -292,10 +310,9 @@ async function startGame() {
   try {
     const now = Date.now();
     const endsAt = now + (game.config.durationSec * 1000);
-    if (!isLocal) await fbPatch(`games/${code}`, { status: 'playing', startedAt: now, endsAt });
-    game.status = 'playing';
-    game.startedAt = now;
-    game.endsAt = endsAt;
+    // In teamspel: gaten en te volle teams aanvullen, in dezelfde update als de start
+    const teamFix = teamMode() ? assignTeams(false) : {};
+    await fbUpdate({ status: 'playing', startedAt: now, endsAt, ...teamFix });
     hostStartBluff(now);
     enterGame();
   } catch (e) {
@@ -310,7 +327,10 @@ async function startGame() {
 function enterGame() {
   showScreen('screen-game');
   endedShown = false;
+  tradeTab = 'trade';
+  $('btn-team').hidden = !teamMode();
   initGameMap();
+  initMates();
   primeBluff();
   startGeolocation();
   startClock();
@@ -332,7 +352,7 @@ function initGameMap() {
   if (ms.length) {
     const bounds = L.latLngBounds(ms.map(m => [m.lat, m.lng]));
     // ruimte laten voor HUD (boven) en koffer (onder)
-    gameMap.fitBounds(bounds, { paddingTopLeft: [50, 110], paddingBottomRight: [50, 200], maxZoom: 17 });
+    gameMap.fitBounds(bounds, { paddingTopLeft: [50, 110], paddingBottomRight: [50, 240], maxZoom: 17 });
   } else {
     gameMap.setView(NL_CENTER, 13);
   }
@@ -398,6 +418,7 @@ function tickClock() {
   const el = $('hud-timer');
   el.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   el.classList.toggle('is-low', s <= 60);
+  if (remain > 0) tickRisk();   // risk.js: zendingen lossen, aftellen
   if (remain <= 0) {
     if (me.isHost && !isLocal) fbPatch(`games/${code}`, { status: 'ended' }).catch(() => {});
     if (game) game.status = 'ended';
@@ -437,9 +458,8 @@ function renderInventory() {
   const owned = GOODS.filter(g => (inv[g.id] || 0) > 0);
   const worth = owned.reduce((sum, g) => sum + inv[g.id] * avgPrice(g.id), 0);
   $('inv-worth').textContent = owned.length ? `≈ ${euro(worth)}` : 'leeg';
-  setHtml('inv-list', owned.length
-    ? owned.map(g => `<span class="item">${ill(g.ill, 'ill ill--sm')}${inv[g.id]}× ${g.short}</span>`).join('')
-    : '<p class="koffer__empty">Tik op een markt om te handelen.</p>');
+  const chips = owned.map(g => `<span class="item">${ill(g.ill, 'ill ill--sm')}${inv[g.id]}× ${g.short}</span>`).join('') + shipChipsHtml();
+  setHtml('inv-list', chips || '<p class="koffer__empty">Tik op een markt om te handelen.</p>');
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -447,6 +467,7 @@ function renderInventory() {
 // ══════════════════════════════════════════════════════════════════
 function openTrade(id) {
   activeMarketId = id;
+  tradeTab = 'trade';
   openSheet('trade-modal');
   renderTrade();
 }
@@ -483,6 +504,11 @@ function renderTrade() {
 
   document.querySelectorAll('#trade-qty .seg__btn').forEach(b =>
     b.setAttribute('aria-pressed', String(Number(b.dataset.qty) === tradeQty)));
+  document.querySelectorAll('#trade-tabs .seg__btn').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.tab === tradeTab)));
+  if (tradeTab !== 'trade') { renderRisk(m, near); return; }   // risk.js
+  $('trade-status').hidden = true;
+  $('trade-foot').textContent = 'Het label vergelijkt de prijs met het gemiddelde van alle markten.';
 
   const p = myPlayer();
   const qty = tradeQty;
@@ -522,28 +548,28 @@ function renderTrade() {
 async function doTrade(gid, kind) {
   const id = activeMarketId;
   if (!canTradeAt(id)) { toast('Je staat niet bij deze markt', 'bad'); return; }
-  const m = game.markets?.[id];
-  const p = myPlayer();
-  if (!m || !p) return;
-  const price = m.prices?.[gid] ?? GOOD[gid].base;
-  const qty = tradeQty;
-  const total = price * qty;
-  const have = p.inv?.[gid] || 0;
-
-  if (kind === 'buy' && p.capital < total) { toast('Te weinig cash', 'bad'); return; }
-  if (kind === 'sell' && have < qty) { toast('Zoveel heb je niet', 'bad'); return; }
-
-  // Nieuwe stand eerst uitrekenen, pas lokaal doorvoeren als opslaan gelukt is
-  const inv = { ...(p.inv || {}) };
-  const capital = kind === 'buy' ? p.capital - total : p.capital + total;
-  inv[gid] = kind === 'buy' ? have + qty : have - qty;
-  if (inv[gid] === 0) delete inv[gid];
-
-  document.querySelectorAll('#trade-goods .btn').forEach(b => b.disabled = true);
+  document.querySelectorAll('#trade-goods .btn').forEach(b => { b.disabled = true; });
   try {
-    await writeMe({ capital, inv });
-    toast(`${kind === 'buy' ? 'Gekocht' : 'Verkocht'}: ${qty}× ${GOOD[gid].short} voor ${euro(total)}`, 'good');
-    renderGame();
+    await withMe(async () => {
+      const m = game.markets?.[id];
+      const p = myPlayer();
+      if (!m || !p) return;
+      const price = m.prices?.[gid] ?? GOOD[gid].base;
+      const qty = tradeQty;
+      const total = price * qty;
+      const have = p.inv?.[gid] || 0;
+      if (kind === 'buy' && p.capital < total) { toast('Te weinig cash', 'bad'); return; }
+      if (kind === 'sell' && have < qty) { toast('Zoveel heb je niet', 'bad'); return; }
+
+      // Nieuwe stand eerst uitrekenen; writeMe voert hem pas lokaal door als opslaan gelukt is
+      const inv = { ...(p.inv || {}) };
+      const capital = kind === 'buy' ? p.capital - total : p.capital + total;
+      inv[gid] = kind === 'buy' ? have + qty : have - qty;
+      if (inv[gid] === 0) delete inv[gid];
+      await writeMe({ capital, inv });
+      toast(`${kind === 'buy' ? 'Gekocht' : 'Verkocht'}: ${qty}× ${GOOD[gid].short} voor ${euro(total)}`, 'good');
+      renderGame();
+    });
   } catch (e) {
     toast(e.message || 'Handelen mislukt, probeer opnieuw', 'bad');
   } finally {
@@ -567,16 +593,19 @@ function netWorth(p) {
   // Nog niet bijgeschreven tipbetalingen tellen mee (de mijne die al verwerkt zijn niet dubbel)
   const isMe = p === myPlayer();
   for (const [id, pay] of Object.entries(p.payments || {})) {
-    if (!(isMe && foldedPays.has(id))) w += pay.amount || 0;
+    if (isMe && foldedPays.has(id)) continue;
+    w += pay.amount || 0;
+    if (pay.good && pay.qty) w += pay.qty * avgPrice(pay.good);
   }
   return w;
 }
 function standings() {
   return Object.entries(game?.players || {})
-    .map(([pid, p]) => ({ pid, name: p.name || '???', worth: netWorth(p), manual: !!p.manualLoc }))
+    .map(([pid, p]) => ({ pid, name: p.name || '???', worth: netWorth(p), manual: !!p.manualLoc, team: p.team || null }))
     .sort((a, b) => b.worth - a.worth);
 }
 function renderLeaderboardInto(elId) {
+  if (teamMode()) { setHtml(elId, teamStandingsHtml()); return; }   // teams.js
   setHtml(elId, standings().map((s, i) => {
     const isMe = s.pid === me.pid;
     return `<li class="${isMe ? 'is-me' : ''}">
@@ -598,8 +627,17 @@ function endGame() {
   stopPicking();
   closeAllSheets();
   showScreen('screen-end');
+  clearSharedPos();   // teams.js: gedeelde plek wissen
   const winner = standings()[0];
-  if (winner) {
+  const topTeam = teamMode() ? teamStandings()[0] : null;
+  if (topTeam && winner) {
+    $('end-winner').innerHTML = `${ill('ill-kroon', 'ill ill--xl')}
+      <span class="winner__label">Rijkste team</span>
+      <span class="winner__name">${topTeam.name}</span>
+      <span class="winner__worth">${euro(topTeam.worth)}</span>
+      <span class="winner__sub">${topTeam.members.map(m => escapeHtml(m.name)).join(' + ')}</span>
+      <span class="winner__sub">Beste smokkelaar: ${escapeHtml(winner.name)} (${euro(winner.worth)})</span>`;
+  } else if (winner) {
     $('end-winner').innerHTML = `${ill('ill-kroon', 'ill ill--xl')}
       <span class="winner__label">Rijkste smokkelaar</span>
       <span class="winner__name">${escapeHtml(winner.name)}</span>
@@ -647,6 +685,8 @@ function mergeRemote(g) {
     renderGame();
     if (activeMarketId) renderTrade();
     if (!$('lb-modal').hidden) renderLeaderboardInto('lb-list');
+    if (!$('team-modal').hidden) renderTeam();
+    drawMates();
     syncBluff();
   }
   if (game.status === 'ended') endGame();
@@ -706,13 +746,13 @@ function renderSetupMarkets() {
           <button class="chip__x" data-i="${i}" aria-label="Verwijder ${escapeHtml(m.name)}"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
         </span>`).join('')
     : '<p class="chips__empty">Nog geen markten. Tik op de kaart.</p>';
-  const btn = $('btn-create-lobby');
+  const btn = $('btn-setup-next');
   if (btn) {
     const missing = MIN_MARKETS - setupMarkets.length;
     btn.disabled = missing > 0;
     btn.textContent = missing > 0
       ? `Plaats nog ${missing} ${missing === 1 ? 'markt' : 'markten'}`
-      : 'Lobby openen →';
+      : 'Verder: de regels →';
   }
 }
 
@@ -747,6 +787,8 @@ function leaveToHome() {
   me.pid = genId();
   resetLocation();
   resetBluff();
+  resetTeams();
+  resetRisk();
   showScreen('screen-home');
 }
 
@@ -789,6 +831,17 @@ function bind() {
   $('setup-search-form').addEventListener('submit', onSetupSearch);
   $('btn-create-lobby').addEventListener('click', onCreateLobby);
   $('btn-setup-back').addEventListener('click', leaveToHome);
+  $('btn-setup-next').addEventListener('click', () => {
+    if (setupMarkets.length < MIN_MARKETS) return;
+    $('setup-error').hidden = true;
+    $('btn-create-lobby').disabled = false;
+    describeTeams();
+    showScreen('screen-rules');
+  });
+  $('btn-rules-back').addEventListener('click', () => {
+    showScreen('screen-setup');
+    setTimeout(() => setupMap && setupMap.invalidateSize(), 100);
+  });
 
   // LOBBY
   $('btn-start-game').addEventListener('click', startGame);
@@ -815,6 +868,14 @@ function bind() {
     if (!b) return;
     if (b.dataset.act === 'buy') doTrade(b.dataset.g, 'buy');
     else if (b.dataset.act === 'sell') doTrade(b.dataset.g, 'sell');
+    else if (b.dataset.act === 'ship') orderShipment(b.dataset.g);     // risk.js
+    else if (b.dataset.act === 'smuggle') smuggle(b.dataset.g);        // risk.js
+  });
+  $('trade-tabs').addEventListener('click', e => {
+    const b = e.target.closest('[data-tab]');
+    if (!b) return;
+    tradeTab = b.dataset.tab;
+    renderTrade();
   });
   $('trade-qty').addEventListener('click', e => {
     const b = e.target.closest('.seg__btn');
@@ -840,6 +901,7 @@ function bind() {
 
   bindLocation();   // location.js
   bindBluff();      // bluff.js
+  bindTeams();      // teams.js
 }
 
 function showHomeError(msg) { const e = $('home-error'); e.textContent = msg; e.hidden = false; }

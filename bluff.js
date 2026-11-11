@@ -29,7 +29,6 @@ let readTips = new Set();       // tips gelezen (badge)
 let notifiedTips = new Set();   // tips al gemeld (toast)
 let seenResults = new Set();    // uitkomst van eigen aanbiedingen al gemeld
 let foldedPays = new Set();     // tipbetalingen al bijgeschreven
-let folding = false;
 let tipsTab = 'tips';
 let sellTipId = null, sellDraft = null, craftDraft = null, offerId = null;
 let flashTimer = null;
@@ -161,13 +160,16 @@ function syncBluff() {
   for (const [id, n] of Object.entries(game.news || {})) {
     if (seenNews.has(id)) continue;
     seenNews.add(id);
-    showFlash(n);
+    if (SHOCK[n.kind]) showFlash(n);
+    else if (n.kind === 'bust' && n.pid !== me.pid) toast(`${n.name || 'Iemand'} is gepakt door de douane!`, 'bad');
   }
 
   const fresh = myTips().filter(t => !notifiedTips.has(t.id));
   fresh.forEach(t => notifiedTips.add(t.id));
-  if (fresh.some(t => t.source === 'app') && $('tips-modal').hidden) {
-    toast('Psst… er zit een nieuwe geheime tip in je tipsmap', 'good');
+  if ($('tips-modal').hidden) {
+    const shared = fresh.find(t => t.source === 'team');
+    if (shared) toast(`${shared.fromName || 'Een teamgenoot'} deelde een tip met het team`, 'good');
+    else if (fresh.some(t => t.source === 'app')) toast('Psst… er zit een nieuwe geheime tip in je tipsmap', 'good');
   }
 
   for (const [id, o] of Object.entries(game.offers || {})) {
@@ -182,26 +184,35 @@ function syncBluff() {
   if (!$('offer-modal').hidden) renderOffer();
 }
 
-// Betalingen voor verkochte tips bijschrijven (alleen ik schrijf mijn eigen kas)
-async function foldPayments() {
-  if (folding) return;
-  const p = myPlayer();
-  const fresh = Object.entries(p?.payments || {}).filter(([id]) => !foldedPays.has(id));
+// Binnengekomen betalingen (verkochte tips) en giften van teamgenoten bijschrijven.
+// Alleen ik schrijf mijn eigen kas en koffer; anderen leggen iets klaar in players/<pid>/payments.
+function foldPayments() {
+  const fresh = Object.entries(myPlayer()?.payments || {}).filter(([id]) => !foldedPays.has(id));
   if (!fresh.length) return;
-  folding = true;
   fresh.forEach(([id]) => foldedPays.add(id));
-  const sum = fresh.reduce((a, [, x]) => a + (x.amount || 0), 0);
-  const extra = {};
-  fresh.forEach(([id]) => { extra[`players/${me.pid}/payments/${id}`] = null; });
-  try {
-    await writeMe({ capital: (p.capital || 0) + sum }, extra);
-    fresh.forEach(([, x]) => toast(`${x.fromName || 'Iemand'} kocht je tip voor ${euro(x.amount)}`, 'good'));
+  withMe(async () => {
+    const p = myPlayer();
+    if (!p) throw new Error('geen speler');
+    let capital = p.capital || 0;
+    const inv = { ...(p.inv || {}) };
+    const extra = {};
+    for (const [id, x] of fresh) {
+      capital += x.amount || 0;
+      if (x.good && x.qty) inv[x.good] = (inv[x.good] || 0) + x.qty;
+      extra[`players/${me.pid}/payments/${id}`] = null;
+    }
+    await writeMe({ capital, inv }, extra);
+    if (fresh.length === 1) {
+      const x = fresh[0][1];
+      const who = x.fromName || 'Iemand';
+      if (x.kind === 'gift') toast(`${who} gaf je ${x.good ? `${x.qty}× ${GOOD[x.good]?.short || 'waren'}` : euro(x.amount)}`, 'good');
+      else toast(`${who} kocht je tip voor ${euro(x.amount)}`, 'good');
+    } else {
+      toast(`Er kwamen ${fresh.length} betalingen of giften binnen`, 'good');
+    }
     renderGame();
-  } catch (e) {
-    fresh.forEach(([id]) => foldedPays.delete(id));   // volgende poll opnieuw
-  } finally {
-    folding = false;
-  }
+    if (activeMarketId) renderTrade();
+  }).catch(() => { fresh.forEach(([id]) => foldedPays.delete(id)); });   // volgende poll opnieuw
 }
 
 function showFlash(n) {
@@ -309,7 +320,12 @@ function tipCard(t) {
   const [cls, label] = { open: ['open', 'Loopt nog'], yes: ['yes', 'Uitgekomen'], no: ['no', 'Niet uitgekomen'] }[out];
   const src = t.source === 'self' ? 'Zelf verzonnen (alleen jij ziet dit)'
     : t.source === 'bought' ? `Gekocht van ${escapeHtml(t.fromName || '?')}`
+    : t.source === 'team' ? `Gedeeld door ${escapeHtml(t.fromName || 'je team')}`
     : 'Gefluisterd door de markt';
+  const canShare = out === 'open' && t.source !== 'self' && t.source !== 'team' && teammates().length > 0;
+  const share = !canShare ? ''
+    : t.shared ? '<span class="status status--yes">Gedeeld</span>'
+    : `<button class="btn btn--line btn--sm" data-share="${t.id}">${ill('ico-team', 'ico')} Deel</button>`;
   return `
     <article class="tip">
       ${ill(g?.ill || 'ill-tip', 'ill ill--lg')}
@@ -319,7 +335,10 @@ function tipCard(t) {
       </div>
       <div class="tip__foot">
         <span class="status status--${cls}">${label}</span>
-        ${out === 'open' ? `<button class="btn btn--ink btn--sm" data-sell="${t.id}">Verkoop</button>` : ''}
+        <span class="tip__actions">
+          ${share}
+          ${out === 'open' ? `<button class="btn btn--ink btn--sm" data-sell="${t.id}">Verkoop</button>` : ''}
+        </span>
       </div>
     </article>`;
 }
@@ -331,12 +350,24 @@ function newsHtml() {
   }
   return items.map(n => {
     const s = SHOCK[n.kind];
+    const what = GOOD[n.good]?.short || 'Waren';
+    if (n.kind === 'bust') {
+      return `
+      <article class="news">
+        ${ill('ill-douane', 'ill ill--lg')}
+        <div>
+          <p class="news__title">Gepakt bij de douane</p>
+          <p class="news__text">${escapeHtml(n.name || 'Iemand')} verloor ${n.qty || '?'}× ${what} · ${minutesAgo(n.at)}</p>
+        </div>
+      </article>`;
+    }
+    if (!s) return '';
     return `
       <article class="news">
         ${ill(s.ill, 'ill ill--lg')}
         <div>
           <p class="news__title">${s.title} bij ${marketChip(n.market)}</p>
-          <p class="news__text">${s.line(GOOD[n.good]?.short || 'Waren')} · ${minutesAgo(n.at)}</p>
+          <p class="news__text">${s.line(what)} · ${minutesAgo(n.at)}</p>
         </div>
       </article>`;
   }).join('');
@@ -345,9 +376,14 @@ function newsHtml() {
 // ══════════════════════════════════════════════════════════════════
 //  Tip verkopen
 // ══════════════════════════════════════════════════════════════════
+// Mogelijke kopers: iedereen behalve jijzelf en (in teamspel) je teamgenoten
+function buyers() {
+  return Object.entries(game?.players || {}).filter(([pid]) => pid !== me.pid && !isTeammate(pid));
+}
+
 function openSell(tipId) {
   sellTipId = tipId;
-  const others = Object.keys(game.players || {}).filter(pid => pid !== me.pid);
+  const others = buyers().map(([pid]) => pid);
   sellDraft = { to: others.length === 1 ? others[0] : null, price: 40, showGood: true };
   openSheet('sell-modal');
   renderSell();
@@ -357,7 +393,7 @@ function renderSell() {
   const t = myPlayer()?.tips?.[sellTipId];
   if (!t) { closeSheet('sell-modal'); return; }
   const g = GOOD[t.good];
-  const others = Object.entries(game.players || {}).filter(([pid]) => pid !== me.pid);
+  const others = buyers();
   $('sell-body').innerHTML = `
     <div class="teaser">
       ${ill(g.ill, 'ill ill--lg')}
@@ -371,7 +407,7 @@ function renderSell() {
       ${others.length ? `<div class="picks">${others.map(([pid, p]) => `
         <button class="pick" data-to="${pid}" aria-pressed="${sellDraft.to === pid}">
           <span class="avatar" aria-hidden="true">${escapeHtml((p.name || '?').charAt(0).toUpperCase())}</span>${escapeHtml(p.name || '?')}
-        </button>`).join('')}</div>` : '<p class="note">Er zijn nog geen andere spelers.</p>'}
+        </button>`).join('')}</div>` : '<p class="note">Er zijn nog geen tegenstanders om aan te verkopen.</p>'}
     </div>
     <div>
       <span class="form__label">Vraagprijs</span>
@@ -413,6 +449,29 @@ async function sendOffer() {
     if (!$('tips-modal').hidden) renderTips();
   } catch (e) {
     toast(e.message || 'Versturen mislukt, probeer opnieuw', 'bad');
+    btn.disabled = false;
+  }
+}
+
+async function shareTip(id, btn) {
+  const t = myPlayer()?.tips?.[id];
+  const mates = teammates();
+  if (!t || !mates.length) return;
+  btn.disabled = true;
+  const now = Date.now();
+  const updates = { [`players/${me.pid}/tips/${id}/shared`]: true };
+  mates.forEach(([pid], i) => {
+    updates[`players/${pid}/tips/${newId('g')}${i}`] = {
+      good: t.good, market: t.market, dir: t.dir, issuedAt: t.issuedAt || now, expiresAt: t.expiresAt || now,
+      source: 'team', fromName: me.name, receivedAt: now,
+    };
+  });
+  try {
+    await fbUpdate(updates);
+    toast('Tip gedeeld met je team', 'good');
+    renderTips();
+  } catch (e) {
+    toast(e.message || 'Delen mislukt, probeer opnieuw', 'bad');
     btn.disabled = false;
   }
 }
@@ -481,11 +540,15 @@ async function acceptOffer() {
   const tipId = newId('b');
   try {
     // Eén atomaire update: status, mijn kas, mijn nieuwe tip, betaling aan de verkoper
-    await writeMe({ capital: p.capital - o.price }, {
-      [`offers/${id}/status`]: 'accepted',
-      [`offers/${id}/decidedAt`]: now,
-      [`players/${me.pid}/tips/${tipId}`]: { ...o.tip, source: 'bought', fromName: o.fromName || '?', receivedAt: now },
-      [`players/${o.from}/payments/${id}`]: { amount: o.price, fromName: me.name, at: now },
+    await withMe(async () => {
+      const cash = myPlayer()?.capital || 0;
+      if (cash < o.price) throw new Error('Te weinig cash');
+      await writeMe({ capital: cash - o.price }, {
+        [`offers/${id}/status`]: 'accepted',
+        [`offers/${id}/decidedAt`]: now,
+        [`players/${me.pid}/tips/${tipId}`]: { ...o.tip, source: 'bought', fromName: o.fromName || '?', receivedAt: now },
+        [`players/${o.from}/payments/${id}`]: { kind: 'tip', amount: o.price, fromName: me.name, at: now },
+      });
     });
     notifiedTips.add(tipId);
     closeSheet('offer-modal');
@@ -574,7 +637,7 @@ async function saveCraft() {
 function resetBluff() {
   hostPlan = []; lastTipRound = 0;
   seenNews = new Set(); readTips = new Set(); notifiedTips = new Set();
-  seenResults = new Set(); foldedPays = new Set(); folding = false;
+  seenResults = new Set(); foldedPays = new Set();
   tipsTab = 'tips'; sellTipId = null; sellDraft = null; craftDraft = null; offerId = null;
   clearTimeout(flashTimer);
   $('newsflash').hidden = true;
@@ -595,6 +658,8 @@ function bindBluff() {
   $('tips-body').addEventListener('click', e => {
     const sell = e.target.closest('[data-sell]');
     if (sell) return openSell(sell.dataset.sell);
+    const share = e.target.closest('[data-share]');
+    if (share) return shareTip(share.dataset.share, share);
     const off = e.target.closest('[data-offer]');
     if (off) return openOffer(off.dataset.offer);
     const cancel = e.target.closest('[data-cancel]');

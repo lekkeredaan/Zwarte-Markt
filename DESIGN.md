@@ -26,6 +26,7 @@ Ravotters-huisstijl met een eigen **nachtmarkt**-twist. Alles staat als token in
 | `--muted` | `#5C5240` | Secundaire tekst op crème (7:1) |
 | `--up` / `--down` | `#0B7A3E` / `#B0123F` | Trend-tekst op crème |
 | `--disabled` | `#8A7F66` | Uitgeschakelde knoppen (gestippeld) |
+| `--team-1 … --team-6` | geel, roze, groen, blauw `#5BB8FF`, oranje `#FF9A3D`, lila `#C9A2FF` | Teamkleur, via `style="--tc: var(--team-N)"`. Altijd met inkt-tekst |
 
 Contrast: tekst op groen, geel en roze is altijd **inkt** (≥ 5:1). Nooit wit op groen.
 
@@ -74,7 +75,7 @@ Daaronder Koop (`--ink`) en Verkoop (`--gain`). Het aantal kies je één keer bo
 Pillen bovenop de kaart: cash (geel, Anton), timer (crème; roze en knipperend in de laatste minuut), centreerknop (rond). Inktschaduw, want de kaart is licht.
 
 ### Koffer `.koffer`
-Zwevende crème kaart onderaan de kaart: titel + geschatte waarde links, knoppen **Tips** (met roze teller `.count-badge`) en **Stand** rechts, en een horizontale rij `.item`-chips per goed (met illustratie).
+Zwevende crème kaart onderaan de kaart, drie rijen: titel + geschatte waarde, een horizontale rij `.item`-chips per goed (met illustratie; een zending onderweg is een gestippelde `.item--ship` met aftelklok), en onderaan een rij even brede knoppen: **Tips** (met roze teller `.count-badge`), **Team** (alleen in teamspel) en **Stand**.
 
 ### Markt-marker `.mk`
 Druppelvormige pin met het **marktnummer** (Anton) en een inkt-naamlabel eronder. In de buurt: geel en wiebelend. Tijdens een schok wiebelt de schok-illustratie (`.mk__shock`) rechtsboven de pin. Eigen positie `.me`: roze stip met crème ring; handmatig (`.me--manual`): gele stip.
@@ -94,11 +95,25 @@ Eén stapel onder de HUD, in deze volgorde:
 - `.stepper`: −/+ met een grote Anton-waarde (vraagprijs).
 - `.loc-status` + `.dot--ok/manual/off`: locatiestatus.
 
+### Teams
+- `.team`: teamblok in de lobby. Balk links in de teamkleur, kop met `.team__dot`, naam (Anton), bezetting "2/2" en rechts een actie: `.tag--team` "Jouw team", `.tag--night` "Vol" of een knop "Wissel". Avatars krijgen de teamkleur.
+- `.standings__team`: teamrij in de stand: teamnaam met stip, daaronder de leden met hun waarde, rechts het teamtotaal.
+- `.member`: rij in het teamscherm met avatar, naam, waarde en knop "Geef". Het teamscherm begint met een `.teaser` (teamnaam, plek, totaal).
+- `.mate`: teamgenoot op de kaart: rondje in de teamkleur met de eerste letter.
+- Geven: `.seg` Cash/Goederen, `.stepper` met de knop "Alles" (`.pick--plain`), één primaire knop.
+
+### Risico (tabbladen in het marktscherm)
+- Tabbladen `#trade-tabs`: Handel · Zending · Douane (zelfde `.seg` als elders). Het aantal per klik geldt voor alle drie.
+- `.explain`: uitlegblok met illustratie bovenaan een tabblad. Eén zin met de kansen in gewone taal.
+- `.ship`: gestippelde pil voor een zending onderweg (illustratie, wat, aftelklok in Anton). `.ship--ok` / `.ship--fail`: laatste uitkomst, groen of roze.
+- `.row__actions--one`: één brede actieknop per goed. Kan het niet, dan staat de reden op de (gestippelde) knop: "Te weinig cash", "De douane let nog op je".
+- Alles wat elke seconde verandert (aftellen) staat in `#trade-status`, los van de knoppen in `#trade-goods`. Zo vallen tikken niet weg.
+
 ### Overig
 - `.ticket`: de lobbycode als smokkelticket (geel, roze schaduw, ponsgaten).
 - `.roster` / `.standings`: pil-rijen met avatar-initiaal of rang; jezelf in geel. `.tag--soft` "handmatig" achter een naam.
 - `.alert`: crème-roze melding met roze zijbalk.
-- `.toast`: inkt-pil onderin (boven de koffer), groene of roze rand.
+- `.toast`: inkt-pil onderin (boven de koffer), groene of roze rand. Is er een paneel open, dan bovenin (`.toast--top`).
 - `.sticker`: schuine roze label-sticker (zoals "ZES SPELLEN" op de hoofdsite).
 - `.btn--line`: omlijnde knop voor secundaire acties op crème.
 
@@ -107,8 +122,8 @@ Geen emoji: alles staat als SVG-`<symbol>` bovenin [`index.html`](index.html) en
 
 | Soort | Rooster | Stijl | Voorbeelden |
 |---|---|---|---|
-| Illustratie `ill-*` | 48×48 | Inktlijn 3, vlakke merkkleuren (hex van de tokens), harde inktschaduw 2–3px rechtsonder | `ill-horloges`, `ill-kruiden`, `ill-munten`, `ill-sigaren`, `ill-inval`, `ill-tekort`, `ill-tip`, `ill-kroon` |
-| Icoon `ico-*` | 24×24 | Lijn 2,5, ronde uiteinden, `currentColor` | `ico-pin`, `ico-share`, `ico-copy`, `ico-trophy`, `ico-tip`, `ico-news`, `ico-target`, `ico-search`, `ico-pen`, `ico-gps-off`, `ico-x` |
+| Illustratie `ill-*` | 48×48 | Inktlijn 3, vlakke merkkleuren (hex van de tokens), harde inktschaduw 2–3px rechtsonder | `ill-horloges`, `ill-kruiden`, `ill-munten`, `ill-sigaren`, `ill-inval`, `ill-tekort`, `ill-tip`, `ill-kroon`, `ill-zending`, `ill-douane` |
+| Icoon `ico-*` | 24×24 | Lijn 2,5, ronde uiteinden, `currentColor` | `ico-pin`, `ico-share`, `ico-copy`, `ico-trophy`, `ico-tip`, `ico-news`, `ico-target`, `ico-search`, `ico-pen`, `ico-gps-off`, `ico-x`, `ico-team`, `ico-gift`, `ico-shuffle` |
 
 Maten: `.ill--sm` 22, `.ill--md` 30, `.ill--lg` 40, `.ill--xl` 72; `.ico` 20. Nieuw goed of nieuwe schok? Eerst een illustratie in dezelfde stijl tekenen. Enige extra kleur buiten de tokens: bruin `#A8652F` (sigaar) en `#D9A066` (krat).
 

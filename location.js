@@ -33,6 +33,7 @@ function onMyPosChanged() {
   updateMeMarker();
   drawMarkets();
   if (activeMarketId) renderTrade();
+  sharePos();   // teams.js: in teamspel je plek met je team delen
 }
 
 function updateMeMarker() {

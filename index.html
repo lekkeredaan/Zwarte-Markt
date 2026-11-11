@@ -85,8 +85,31 @@
         <circle cx="24" cy="9" r="3.2" fill="#2BD67B" stroke="#141414" stroke-width="2"/>
         <circle cx="42" cy="14" r="3.2" fill="#FF2E63" stroke="#141414" stroke-width="2"/>
       </symbol>
+      <!-- Zending (pakket met touw en label) -->
+      <symbol id="ill-zending" viewBox="0 0 48 48">
+        <rect x="9" y="17" width="34" height="26" rx="2" fill="#141414"/>
+        <rect x="6" y="14" width="34" height="26" rx="2" fill="#D9A066" stroke="#141414" stroke-width="3"/>
+        <path d="M6 24h34M23 14v26" stroke="#141414" stroke-width="2.5"/>
+        <path d="M23 14c-6-9-13-5-7 0M23 14c6-9 13-5 7 0" fill="#FF2E63" stroke="#141414" stroke-width="2.5" stroke-linejoin="round"/>
+        <rect x="27" y="28" width="9" height="7" rx="1" fill="#FBF1DC" stroke="#141414" stroke-width="2"/>
+      </symbol>
+      <!-- Douane (slagboom) -->
+      <symbol id="ill-douane" viewBox="0 0 48 48">
+        <rect x="8" y="36" width="14" height="8" rx="2" fill="#141414"/>
+        <rect x="9" y="14" width="8" height="26" rx="2" fill="#FFD400" stroke="#141414" stroke-width="3"/>
+        <rect x="5" y="34" width="16" height="8" rx="2" fill="#FFD400" stroke="#141414" stroke-width="3"/>
+        <g transform="rotate(-14 13 19)">
+          <rect x="11" y="17" width="34" height="8" rx="2" fill="#141414"/>
+          <rect x="9" y="14" width="34" height="8" rx="2" fill="#FBF1DC" stroke="#141414" stroke-width="3"/>
+          <path d="M17 14.5v7M25 14.5v7M33 14.5v7" stroke="#FF2E63" stroke-width="4"/>
+        </g>
+        <circle cx="13" cy="19" r="3" fill="#FF2E63" stroke="#141414" stroke-width="2"/>
+      </symbol>
 
       <!-- Lijn-iconen (24×24, kleur volgt de tekst) -->
+      <symbol id="ico-team" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M15.5 4.8a3.5 3.5 0 0 1 0 6.4M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></g></symbol>
+      <symbol id="ico-gift" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h12M11 7l5 5-5 5"/><path d="M20 5v14"/></g></symbol>
+      <symbol id="ico-shuffle" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3.5c5 0 6 10 11 10H21M3 17h3.5c1.6 0 2.8-1 3.8-2.4M21 7h-3.5c-1.6 0-2.8 1-3.8 2.4"/><path d="m18 4 3 3-3 3M18 14l3 3-3 3"/></g></symbol>
       <symbol id="ico-pin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.5s6.5-6 6.5-11.5a6.5 6.5 0 1 0-13 0c0 5.5 6.5 11.5 6.5 11.5Z"/><circle cx="12" cy="10" r="2.4"/></g></symbol>
       <symbol id="ico-share" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7.5 7.5 12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></g></symbol>
       <symbol id="ico-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 8.5V6A2.5 2.5 0 0 0 13 3.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/></g></symbol>
@@ -159,7 +182,27 @@
         <button id="btn-use-myloc" class="btn btn--ghost btn--sm"><svg class="ico" aria-hidden="true"><use href="#ico-pin"/></svg> Op mijn plek</button>
         <button id="btn-clear-markets" class="btn btn--ghost btn--sm">Wis alles</button>
       </div>
+      <button id="btn-setup-next" class="btn btn--primary btn--lg btn--block">Verder →</button>
+    </div>
+  </section>
+
+  <!-- ══════════ SPELREGELS (host, stap 2) ══════════ -->
+  <section id="screen-rules" class="screen">
+    <header class="topbar">
+      <button id="btn-rules-back" class="btn btn--ghost btn--sm">← Speelveld</button>
+    </header>
+    <div class="page">
+      <h2 class="h1">De <mark>regels</mark></h2>
       <div class="opts">
+        <label class="opt opt--wide">
+          <span class="label">Spelvorm</span>
+          <select id="opt-teams" class="select">
+            <option value="0" selected>Ieder voor zich</option>
+            <option value="2">Teams van 2</option>
+            <option value="3">Teams van 3</option>
+            <option value="4">Teams van 4</option>
+          </select>
+        </label>
         <label class="opt">
           <span class="label">Startkapitaal</span>
           <select id="opt-capital" class="select">
@@ -179,6 +222,7 @@
           </select>
         </label>
       </div>
+      <p id="teams-hint" class="lead lead--sm">Iedereen speelt voor zichzelf. De rijkste smokkelaar wint.</p>
       <label class="toggle">
         <input type="checkbox" id="opt-gps" checked />
         <span class="toggle__text">
@@ -214,10 +258,11 @@
         <button id="btn-copy-code" class="btn btn--secondary"><svg class="ico" aria-hidden="true"><use href="#ico-copy"/></svg> Kopieer</button>
       </div>
       <div class="section-head">
-        <span class="label">Handelaren</span>
+        <span id="lobby-label" class="label">Handelaren</span>
         <span id="lobby-count" class="count">0</span>
+        <button id="btn-shuffle" class="btn btn--ghost btn--sm" hidden><svg class="ico" aria-hidden="true"><use href="#ico-shuffle"/></svg> Hussel teams</button>
       </div>
-      <ul id="lobby-players" class="roster"></ul>
+      <div id="lobby-players" class="stack"></div>
     </div>
     <footer class="footer">
       <div id="lobby-host-box" hidden>
@@ -264,21 +309,22 @@
 
     <div id="inv-tray" class="koffer">
       <div class="koffer__head">
-        <div class="koffer__titles">
-          <h3 class="koffer__title">Koffer</h3>
-          <span id="inv-worth" class="koffer__worth"></span>
-        </div>
-        <div class="koffer__actions">
-          <button id="btn-tips" class="btn btn--ink btn--sm has-badge">
-            <svg class="ico" aria-hidden="true"><use href="#ico-tip"/></svg> Tips
-            <span id="tips-badge" class="count-badge" hidden>0</span>
-          </button>
-          <button id="btn-leaderboard" class="btn btn--ink btn--sm">
-            <svg class="ico" aria-hidden="true"><use href="#ico-trophy"/></svg> Stand
-          </button>
-        </div>
+        <h3 class="koffer__title">Koffer</h3>
+        <span id="inv-worth" class="koffer__worth"></span>
       </div>
       <div id="inv-list" class="koffer__items"></div>
+      <div class="koffer__actions">
+        <button id="btn-tips" class="btn btn--ink btn--sm has-badge">
+          <svg class="ico" aria-hidden="true"><use href="#ico-tip"/></svg> Tips
+          <span id="tips-badge" class="count-badge" hidden>0</span>
+        </button>
+        <button id="btn-team" class="btn btn--ink btn--sm" hidden>
+          <svg class="ico" aria-hidden="true"><use href="#ico-team"/></svg> Team
+        </button>
+        <button id="btn-leaderboard" class="btn btn--ink btn--sm">
+          <svg class="ico" aria-hidden="true"><use href="#ico-trophy"/></svg> Stand
+        </button>
+      </div>
     </div>
 
     <!-- Handel -->
@@ -293,14 +339,44 @@
           </div>
           <button class="close" data-close aria-label="Sluiten"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
         </div>
+        <div id="trade-tabs" class="seg" role="tablist" aria-label="Wat wil je doen?">
+          <button class="seg__btn seg__btn--grow" data-tab="trade" role="tab" aria-pressed="true">Handel</button>
+          <button class="seg__btn seg__btn--grow" data-tab="ship" role="tab" aria-pressed="false">Zending</button>
+          <button class="seg__btn seg__btn--grow" data-tab="customs" role="tab" aria-pressed="false">Douane</button>
+        </div>
         <div id="trade-qty" class="seg" role="group" aria-label="Aantal per klik">
           <span class="seg__label">Aantal per klik</span>
           <button class="seg__btn" data-qty="1" aria-pressed="true">×1</button>
           <button class="seg__btn" data-qty="5" aria-pressed="false">×5</button>
           <button class="seg__btn" data-qty="10" aria-pressed="false">×10</button>
         </div>
+        <div id="trade-status" class="stack trade-status" hidden></div>
         <div id="trade-goods" class="ledger"></div>
-        <p class="sheet__foot">Het label vergelijkt de prijs met het gemiddelde van alle markten.</p>
+        <p id="trade-foot" class="sheet__foot">Het label vergelijkt de prijs met het gemiddelde van alle markten.</p>
+      </div>
+    </div>
+
+    <!-- Team -->
+    <div id="team-modal" class="sheet" hidden>
+      <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="team-title">
+        <div class="sheet__grab"></div>
+        <div class="sheet__head">
+          <h3 id="team-title" class="sheet__title">Jouw team</h3>
+          <button class="close" data-close aria-label="Sluiten"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
+        </div>
+        <div id="team-body" class="form"></div>
+      </div>
+    </div>
+
+    <!-- Geven aan een teamgenoot -->
+    <div id="give-modal" class="sheet" hidden>
+      <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="give-title">
+        <div class="sheet__grab"></div>
+        <div class="sheet__head">
+          <h3 id="give-title" class="sheet__title">Geven</h3>
+          <button class="close" data-close aria-label="Sluiten"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
+        </div>
+        <div id="give-body" class="form"></div>
       </div>
     </div>
 
@@ -412,5 +488,7 @@
   <script src="script.js"></script>
   <script src="location.js"></script>
   <script src="bluff.js"></script>
+  <script src="teams.js"></script>
+  <script src="risk.js"></script>
 </body>
 </html>
