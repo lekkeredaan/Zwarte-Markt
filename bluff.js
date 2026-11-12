@@ -97,14 +97,17 @@ function dealTipsIfDue(now) {
   const upcoming = hostPlan.filter(e => !e.fired && e.at - now > 45000 && e.at - now < 6 * 60000);
   Object.keys(game.players || {}).forEach((pid, i) => {
     if (Math.random() > TIP_CHANCE) return;
-    let tip;
+    let tip, real = false;
     if (upcoming.length && Math.random() < TIP_REAL_CHANCE) {
+      real = true;
       const ev = pick(upcoming);
       tip = { good: ev.good, market: ev.market, dir: SHOCK[ev.kind].dir, expiresAt: ev.at + 90000 };
     } else {
       tip = fakeTip(now);
     }
-    updates[`players/${pid}/tips/t${now.toString(36)}${i}`] = { ...tip, issuedAt: now, source: 'app' };
+    // De Oplichter heeft voorkennis: bij zijn tips staat of ze echt zijn (swindle.js)
+    const inside = pid === game.swindler ? { real } : {};
+    updates[`players/${pid}/tips/t${now.toString(36)}${i}`] = { ...tip, ...inside, issuedAt: now, source: 'app' };
   });
   return updates;
 }
@@ -162,6 +165,7 @@ function syncBluff() {
     seenNews.add(id);
     if (SHOCK[n.kind]) showFlash(n);
     else if (n.kind === 'bust' && n.pid !== me.pid) toast(`${n.name || 'Iemand'} is gepakt door de douane!`, 'bad');
+    else if (n.kind === 'theft' && n.pid !== me.pid && !isSwindler()) toast(`${n.name || 'Iemand'} is gerold${game.markets?.[n.market] ? ` bij ${game.markets[n.market].name}` : ''}!`, 'bad');
   }
 
   const fresh = myTips().filter(t => !notifiedTips.has(t.id));
@@ -196,16 +200,19 @@ function foldPayments() {
     let capital = p.capital || 0;
     const inv = { ...(p.inv || {}) };
     const extra = {};
+    let loot = 0;
     for (const [id, x] of fresh) {
       capital += x.amount || 0;
+      if (x.kind === 'loot') loot += x.amount || 0;
       if (x.good && x.qty) inv[x.good] = (inv[x.good] || 0) + x.qty;
       extra[`players/${me.pid}/payments/${id}`] = null;
     }
-    await writeMe({ capital, inv }, extra);
+    await writeMe(loot ? { capital, inv, loot: (p.loot || 0) + loot } : { capital, inv }, extra);
     if (fresh.length === 1) {
       const x = fresh[0][1];
       const who = x.fromName || 'Iemand';
-      if (x.kind === 'gift') toast(`${who} gaf je ${x.good ? `${x.qty}× ${GOOD[x.good]?.short || 'waren'}` : euro(x.amount)}`, 'good');
+      if (x.kind === 'loot') toast(x.amount ? `Buit binnen: ${euro(x.amount)} van ${who}` : `Niks te halen bij ${who}`, x.amount ? 'good' : 'bad');
+      else if (x.kind === 'gift') toast(`${who} gaf je ${x.good ? `${x.qty}× ${GOOD[x.good]?.short || 'waren'}` : euro(x.amount)}`, 'good');
       else toast(`${who} kocht je tip voor ${euro(x.amount)}`, 'good');
     } else {
       toast(`Er kwamen ${fresh.length} betalingen of giften binnen`, 'good');
@@ -322,6 +329,8 @@ function tipCard(t) {
     : t.source === 'bought' ? `Gekocht van ${escapeHtml(t.fromName || '?')}`
     : t.source === 'team' ? `Gedeeld door ${escapeHtml(t.fromName || 'je team')}`
     : 'Gefluisterd door de markt';
+  const inside = t.source === 'app' && typeof t.real === 'boolean'
+    ? `<span class="stamp stamp--${t.real ? 'shortage' : 'raid'}">${t.real ? 'Echt' : 'Nep'}</span>` : '';
   const canShare = out === 'open' && t.source !== 'self' && t.source !== 'team' && teammates().length > 0;
   const share = !canShare ? ''
     : t.shared ? '<span class="status status--yes">Gedeeld</span>'
@@ -330,7 +339,7 @@ function tipCard(t) {
     <article class="tip">
       ${ill(g?.ill || 'ill-tip', 'ill ill--lg')}
       <div>
-        <p class="tip__text">Prijs van <strong>${g?.short || '?'}</strong> bij ${marketChip(t.market)} gaat ${dirPill(t.dir)}</p>
+        <p class="tip__text">Prijs van <strong>${g?.short || '?'}</strong> bij ${marketChip(t.market)} gaat ${dirPill(t.dir)}${inside}</p>
         <p class="tip__meta">${src} · ${minutesAgo(t.receivedAt || t.issuedAt)}</p>
       </div>
       <div class="tip__foot">
@@ -358,6 +367,16 @@ function newsHtml() {
         <div>
           <p class="news__title">Gepakt bij de douane</p>
           <p class="news__text">${escapeHtml(n.name || 'Iemand')} verloor ${n.qty || '?'}× ${what} · ${minutesAgo(n.at)}</p>
+        </div>
+      </article>`;
+    }
+    if (n.kind === 'theft') {
+      return `
+      <article class="news">
+        ${ill('ill-masker', 'ill ill--lg')}
+        <div>
+          <p class="news__title">Gerold${game.markets?.[n.market] ? ` bij ${marketChip(n.market)}` : ''}</p>
+          <p class="news__text">${escapeHtml(n.name || 'Iemand')} is geld kwijt. Wie stond daar nog meer? · ${minutesAgo(n.at)}</p>
         </div>
       </article>`;
     }

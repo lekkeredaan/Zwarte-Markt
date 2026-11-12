@@ -1008,3 +1008,46 @@ ul.members { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ══════════ De Oplichter (v4) ══════════ */
+.rolelist { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--s3); }
+.rolelist li { padding: var(--s3); background: var(--paper); border: var(--bw-thin) solid var(--ink); border-radius: var(--r-md); font-size: var(--fs-sm); font-weight: 600; line-height: 1.4; }
+.rolelist strong { display: block; font-family: var(--font-display); font-weight: 400; font-size: var(--fs-lg); line-height: 1.15; text-transform: uppercase; }
+.member__sub { display: block; font-weight: 600; color: var(--muted); }
+.ledger .member + .member { margin-top: var(--s2); }
+
+.page--vote { padding-top: var(--s8); }
+.votehead { display: flex; align-items: flex-start; gap: var(--s3); }
+.votehead .h1 { flex: 1; }
+.votehead .timer { flex-shrink: 0; }
+.votes { display: flex; flex-direction: column; gap: var(--s3); }
+.vote {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  min-height: 60px;
+  padding: 8px var(--s4) 8px 10px;
+  background: var(--cream);
+  color: var(--ink);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-pill);
+  box-shadow: var(--sh-yellow);
+  font: inherit;
+  font-weight: 800;
+  font-size: var(--fs-lg);
+  text-align: left;
+  cursor: pointer;
+}
+.vote[aria-pressed="true"] { background: var(--yellow); box-shadow: var(--sh-pink); }
+.vote:disabled { cursor: default; box-shadow: none; }
+.vote:disabled:not([aria-pressed="true"]) { opacity: .55; }
+.vote__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.winner--caught { background: var(--gain); transform: rotate(1deg); box-shadow: var(--sh-yellow); }
+.winner--escaped { background: var(--pink); transform: rotate(1deg); box-shadow: var(--sh-yellow); }
+.ledger .member .avatar { background: var(--ink); color: var(--yellow); }
+.seg--four { gap: var(--s1); }
+.seg--four .seg__btn { padding-left: 6px; padding-right: 6px; font-size: var(--fs-sm); }
+.winner--caught .ill, .winner--escaped .ill { box-sizing: content-box; padding: 8px; background: var(--cream); border: var(--bw) solid var(--ink); border-radius: 50%; }
+.votehead .h1 { line-height: 1.22; }

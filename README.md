@@ -16,7 +16,16 @@ Geen app, geen account, geen activatiecode: join op je telefoon met een **lobbyc
 7. **Risico** (tabbladen in het marktscherm):
    - *Zending:* bestel voor de halve prijs. Na 3 minuten in je koffer, met 60% kans. Een inval op dat goed bij die markt terwijl de zending onderweg is? Zeker weg.
    - *Douane:* smokkel waar uit je koffer. 65% kans op 1,8× de gemiddelde prijs; gepakt = waar kwijt en de hele stad hoort het. Daarna 4 minuten wachten.
-8. Timer loopt af, bezit wordt verzilverd, de **rijkste wint**.
+8. **De Oplichter** (vanaf 3 spelers, uit te zetten bij de regels): één speler is stiekem de Oplichter. Zie hieronder.
+9. Timer loopt af, bezit wordt verzilverd, de **rijkste wint**.
+
+### De Oplichter
+- Bij de start wijst het spel willekeurig één speler aan. Iedereen bekijkt zijn rol via het maskerknopje bovenin.
+- **Zakkenrollen:** de Oplichter kan bij een markt een speler rollen die daar in de laatste 2 minuten was: 15% van diens cash, hooguit €150. Goederen in de koffer zijn veilig. Daarna 3 minuten wachten.
+- **Voorkennis:** bij de tips die de markt de Oplichter influistert staat of ze echt of nep zijn.
+- Wie gerold is, krijgt een melding. In het marktnieuws staat wie er gerold is en bij welke markt, niet door wie. Wie stond daar toen nog meer?
+- **Stemming:** na de speeltijd stemt iedereen één minuut wie de Oplichter was. Goed gestemd levert €100 op.
+- **Onthulling:** kreeg de Oplichter meer stemmen dan wie dan ook, dan is hij ontmaskerd en gaat de buit terug naar de slachtoffers. Anders ontsnapt hij en krijgt hij €250 extra. Bij gelijke stand ontsnapt hij.
 
 ### Teams
 De host kiest bij de regels: ieder voor zich, of teams van 2, 3 of 4.
@@ -38,6 +47,7 @@ Open het spel in twee vensters: één gewoon en één privé/incognito (of telef
   - [`bluff.js`](bluff.js): tips, tips verkopen/verzinnen/delen, marktschokken, nieuws
   - [`teams.js`](teams.js): teamindeling, teamstand, geven, teamgenoten op de kaart
   - [`risk.js`](risk.js): zendingen en de douane
+  - [`swindle.js`](swindle.js): de Oplichter (rol, zakkenrollen, stemming, onthulling)
   - [`session.js`](session.js): terugkomen in je potje na herladen (opslag op het eigen toestel)
 - Server: één Vercel-functie, [`api/cleanup.js`](api/cleanup.js), die dagelijks oude lobby's opruimt.
 - Kaart: **Leaflet** + OpenStreetMap.
@@ -65,12 +75,13 @@ Proefdraaien zonder iets weg te gooien: `/api/cleanup?dry=1` (met de header `Aut
 - ✅ **v2**: geheime tips (echt/nep), tips verkopen, tips verzinnen, marktschokken (inval/tekort) met nieuws, handmatige locatie, eigen illustraties.
 - ✅ **v3**: risico (zendingen, douane) en teams (2, 3 of 4).
 - ✅ Sessieherstel na herladen en automatisch opruimen van oude lobby's.
-- ⬜ v4: verborgen rol (de Oplichter + eind-onthulling/stemming).
+- ✅ **v4**: de Oplichter (verborgen rol, zakkenrollen, voorkennis, stemming en onthulling).
 
 ## Beveiliging en privacy
 - Firebase-regels staan per lobby dicht: lobby's zijn niet op te sommen, alleen te benaderen met een exacte 6-teken-code.
-- Het schokkenplan staat alleen in het geheugen van de host, dus niet in de database. Tips en aanbiedingen staan wel in de lobby-data: een speler met ontwikkelaarstools zou kunnen spieken. Voor een feestspel onder vrienden is dat acceptabel; echte afscherming vraagt een server (latere versie).
+- Het schokkenplan staat alleen in het geheugen van de host, dus niet in de database. Tips, aanbiedingen en wie de Oplichter is staan wel in de lobby-data: een speler met ontwikkelaarstools zou kunnen spieken. Voor een feestspel onder vrienden is dat acceptabel; echte afscherming vraagt een server (latere versie).
 - In teamspel deelt je telefoon je plek met de lobby, zodat teamgenoten je op de kaart zien. Dat gebeurt alleen tijdens het spel en wordt bij het einde gewist.
+- Met de Oplichter aan deelt je telefoon bij welke markt je net was (alleen de markt, geen coördinaten). Ook dat wordt bij het einde gewist.
 - Bewaartermijn: lobby's worden een dag na het potje automatisch verwijderd (zie *Opruimtaak instellen*). Er staat niets in behalve bijnamen, spelstanden en, tijdens een teamspel, plekken.
 - Om na herladen terug te kunnen komen, onthoudt je eigen browser de lobbycode, je bijnaam en een spelersnummer (op het toestel van de host ook het schokkenplan). Dat blijft op je toestel en verdwijnt als je het potje verlaat.
 - Geen persoonsdata behalve een zelfgekozen bijnaam. Een adres dat je intypt om je plek te zoeken gaat naar OpenStreetMap (Nominatim) en wordt niet door ons opgeslagen; alleen de coördinaten blijven op je telefoon.

@@ -2,7 +2,7 @@
    ZWARTE MARKT — kernlogica
    Realtime via Firebase RTDB (REST + polling). Zonder DB_URL = lokale testmodus.
    Zie ook: location.js (GPS / handmatige locatie), bluff.js (tips, schokken),
-   teams.js, risk.js en session.js (terugkomen na herladen).
+   teams.js, risk.js, swindle.js (de Oplichter) en session.js (terugkomen na herladen).
    ══════════════════════════════════════════════════════════════ */
 
 // ── Firebase config ───────────────────────────────────────────────
@@ -40,7 +40,7 @@ let myPos = null;             // {lat,lng}: GPS of handmatig (zie location.js)
 let pollTimer = null, tickTimer = null, clockTimer = null, geoWatch = null;
 let activeMarketId = null;    // open handelspaneel
 let tradeQty = 1;             // aantal per klik (×1 / ×5 / ×10)
-let tradeTab = 'trade';       // 'trade' | 'ship' | 'customs' (zie risk.js)
+let tradeTab = 'trade';       // 'trade' | 'ship' | 'customs' (risk.js) | 'rob' (swindle.js)
 let endedShown = false;
 let localMe = null;           // {capital, inv, at}: laatste eigen schrijfactie
 const setupMarkerLayer = { layer: null };
@@ -218,6 +218,7 @@ async function createLobby() {
   const gpsCheck = $('opt-gps').checked;
   const allowManualLocation = $('opt-manual').checked;
   const teamSize = parseInt($('opt-teams').value, 10) || 0;
+  const swindler = $('opt-swindler').checked;
 
   const markets = setupMarkets.map((m, i) => ({ id: 'm' + i, name: m.name, lat: m.lat, lng: m.lng }));
 
@@ -227,7 +228,7 @@ async function createLobby() {
     status: 'lobby',
     hostId: me.pid,
     createdAt: Date.now(),
-    config: { startCapital: capital, durationSec: duration, gpsCheck, allowManualLocation, teamSize },
+    config: { startCapital: capital, durationSec: duration, gpsCheck, allowManualLocation, teamSize, swindler },
     markets: buildMarketsNode(markets),
     players: { [me.pid]: host },
   };
@@ -304,6 +305,7 @@ function renderLobby() {
   if (hint) hint.textContent = !enough ? 'Wacht op minstens 2 handelaren om te starten.'
     : teams ? `${players.length} handelaren in ${teamCount(players.length)} teams. Iedereen er? Open de markt.`
     : `${players.length} handelaren binnen. Iedereen er? Open de markt.`;
+  if (hint && enough && game.config?.swindler && players.length < SW_MIN_PLAYERS) hint.textContent += ` De Oplichter doet pas mee vanaf ${SW_MIN_PLAYERS} handelaren.`;
 }
 
 async function startGame() {
@@ -314,7 +316,7 @@ async function startGame() {
     const endsAt = now + (game.config.durationSec * 1000);
     // In teamspel: gaten en te volle teams aanvullen, in dezelfde update als de start
     const teamFix = teamMode() ? assignTeams(false) : {};
-    await fbUpdate({ status: 'playing', startedAt: now, endsAt, ...teamFix });
+    await fbUpdate({ status: 'playing', startedAt: now, endsAt, ...teamFix, ...pickSwindler() });   // swindle.js
     hostStartBluff(now);
     enterGame();
   } catch (e) {
@@ -330,7 +332,9 @@ function enterGame() {
   showScreen('screen-game');
   endedShown = false;
   tradeTab = 'trade';
+  voteShown = false;
   $('btn-team').hidden = !teamMode();
+  renderRoleChrome();   // swindle.js
   initGameMap();
   initMates();
   primeBluff();
@@ -422,12 +426,11 @@ function tickClock() {
   const el = $('hud-timer');
   el.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   el.classList.toggle('is-low', s <= 60);
-  if (remain > 0) tickRisk();   // risk.js: zendingen lossen, aftellen
-  if (remain <= 0) {
-    if (me.isHost && !isLocal) fbPatch(`games/${code}`, { status: 'ended' }).catch(() => {});
-    if (game) game.status = 'ended';
-    endGame();
-  }
+  if (remain > 0) { tickRisk(); return; }   // risk.js: zendingen lossen, aftellen
+  if (votingOpen()) { showVoting(); return; }   // swindle.js: eerst stemmen wie de Oplichter was
+  if (me.isHost && !isLocal) fbPatch(`games/${code}`, { status: 'ended' }).catch(() => {});
+  game.status = 'ended';
+  endGame();
 }
 
 // ── Host-loop: prijzen, marktschokken en tips (alleen host) ──
@@ -438,6 +441,7 @@ function startHostLoop() {
 async function hostTick() {
   if (!game || game.status !== 'playing') return;
   const now = Date.now();
+  if (now >= (game.endsAt || 0)) return;   // tijd om: prijzen bevriezen (ook tijdens de stemming)
   game.markets = nextPrices(game.markets, now);
   const updates = { ...fireDueEvents(now), ...dealTipsIfDue(now) };   // bluff.js
   updates.markets = game.markets;
@@ -511,6 +515,11 @@ function renderTrade() {
     b.setAttribute('aria-pressed', String(Number(b.dataset.qty) === tradeQty)));
   document.querySelectorAll('#trade-tabs .seg__btn').forEach(b =>
     b.setAttribute('aria-pressed', String(b.dataset.tab === tradeTab)));
+  $('tab-rob').hidden = !isSwindler();
+  $('trade-tabs').classList.toggle('seg--four', isSwindler());
+  if (tradeTab === 'rob' && !isSwindler()) tradeTab = 'trade';
+  $('trade-qty').hidden = tradeTab === 'rob';
+  if (tradeTab === 'rob') { renderRob(m, near); return; }      // swindle.js
   if (tradeTab !== 'trade') { renderRisk(m, near); return; }   // risk.js
   $('trade-status').hidden = true;
   $('trade-foot').textContent = 'Het label vergelijkt de prijs met het gemiddelde van alle markten.';
@@ -574,6 +583,7 @@ async function doTrade(gid, kind) {
       await writeMe({ capital, inv });
       toast(`${kind === 'buy' ? 'Gekocht' : 'Verkocht'}: ${qty}× ${GOOD[gid].short} voor ${euro(total)}`, 'good');
       renderGame();
+      sharePresence(id);   // swindle.js: je was hier net
     });
   } catch (e) {
     toast(e.message || 'Handelen mislukt, probeer opnieuw', 'bad');
@@ -605,8 +615,10 @@ function netWorth(p) {
   return w;
 }
 function standings() {
+  // Na afloop telt de uitslag van de stemming mee (swindle.js)
+  const v = game?.status === 'ended' ? verdict() : null;
   return Object.entries(game?.players || {})
-    .map(([pid, p]) => ({ pid, name: p.name || '???', worth: netWorth(p), manual: !!p.manualLoc, team: p.team || null }))
+    .map(([pid, p]) => ({ pid, name: p.name || '???', worth: Math.max(0, netWorth(p) + finalAdjust(pid, v)), manual: !!p.manualLoc, team: p.team || null }))
     .sort((a, b) => b.worth - a.worth);
 }
 function renderLeaderboardInto(elId) {
@@ -633,6 +645,26 @@ function endGame() {
   closeAllSheets();
   showScreen('screen-end');
   clearSharedPos();   // teams.js: gedeelde plek wissen
+  clearPresence();    // swindle.js
+  renderEnd();
+  // Laatste stemmen en bijschrijvingen van anderen ophalen, zodat iedereen dezelfde uitslag ziet
+  const c = code;
+  if (!isLocal) [1500, 4500].forEach(ms => setTimeout(() => refreshEnd(c), ms));
+}
+
+async function refreshEnd(c) {
+  if (!endedShown || code !== c) return;
+  try {
+    const g = await fbGet(`games/${c}`);
+    if (!g || !endedShown || code !== c) return;
+    g.status = 'ended';
+    game = g;
+    renderEnd();
+  } catch (e) { /* dan blijft de stand zoals hij was */ }
+}
+
+function renderEnd() {
+  renderReveal();     // swindle.js: wie was de Oplichter?
   const winner = standings()[0];
   const topTeam = teamMode() ? teamStandings()[0] : null;
   if (topTeam && winner) {
@@ -693,6 +725,8 @@ function mergeRemote(g) {
     if (!$('team-modal').hidden) renderTeam();
     drawMates();
     syncBluff();
+    syncSwindle();
+    if (voteShown) renderVoting();
   }
   if (game.status === 'ended') endGame();
 }
@@ -795,6 +829,7 @@ function leaveToHome() {
   resetBluff();
   resetTeams();
   resetRisk();
+  resetSwindle();
   showScreen('screen-home');
   renderResumeOffer();
 }
@@ -877,6 +912,7 @@ function bind() {
     else if (b.dataset.act === 'sell') doTrade(b.dataset.g, 'sell');
     else if (b.dataset.act === 'ship') orderShipment(b.dataset.g);     // risk.js
     else if (b.dataset.act === 'smuggle') smuggle(b.dataset.g);        // risk.js
+    else if (b.dataset.act === 'rob') rob(b.dataset.p, b);             // swindle.js
   });
   $('trade-tabs').addEventListener('click', e => {
     const b = e.target.closest('[data-tab]');
@@ -909,6 +945,7 @@ function bind() {
   bindLocation();   // location.js
   bindBluff();      // bluff.js
   bindTeams();      // teams.js
+  bindSwindle();    // swindle.js
   bindSession();    // session.js
 }
 

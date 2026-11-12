@@ -47,6 +47,7 @@ function tickRisk() {
   if (!game || game.status !== 'playing') return;
   resolveShipments();
   sharePos();                                   // teams.js: uitgestelde plek alsnog delen
+  sharePresence();                              // swindle.js: bij welke markt sta ik?
   renderInventory();                            // aftellen in de koffer
   if (activeMarketId && tradeTab !== 'trade') renderTrade();
 }

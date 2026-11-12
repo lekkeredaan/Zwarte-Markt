@@ -106,7 +106,17 @@
         <circle cx="13" cy="19" r="3" fill="#FF2E63" stroke="#141414" stroke-width="2"/>
       </symbol>
 
+      <symbol id="ill-masker" viewBox="0 0 48 48">
+        <path d="M8 23c0-5.5 4-9 9.5-9 4 0 5.5 2 8.5 2s4.5-2 8.5-2C40 14 44 17.5 44 23c0 8.5-5 15-11.5 15-4 0-4.5-3.5-6.5-3.5S23.5 38 19.5 38C13 38 8 31.5 8 23Z" fill="#141414"/>
+        <path d="M5 20c0-5.5 4-9 9.5-9 4 0 5.5 2 8.5 2s4.5-2 8.5-2C37 11 41 14.5 41 20c0 8.5-5 15-11.5 15-4 0-4.5-3.5-6.5-3.5S20.5 35 16.5 35C10 35 5 28.5 5 20Z" fill="#FF2E63" stroke="#141414" stroke-width="3" stroke-linejoin="round"/>
+        <ellipse cx="15" cy="21" rx="5" ry="3.8" fill="#FBF1DC" stroke="#141414" stroke-width="2.5"/>
+        <ellipse cx="31" cy="21" rx="5" ry="3.8" fill="#FBF1DC" stroke="#141414" stroke-width="2.5"/>
+        <circle cx="16.5" cy="21" r="1.8" fill="#141414"/>
+        <circle cx="29.5" cy="21" r="1.8" fill="#141414"/>
+      </symbol>
+
       <!-- Lijn-iconen (24×24, kleur volgt de tekst) -->
+      <symbol id="ico-mask" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 10.5C2.5 7.8 4.5 6 7.2 6c2 0 2.800 1 4.800 1s2.800-1 4.800-1c2.700 0 4.700 1.800 4.700 4.500 0 4.200-2.500 7.500-5.700 7.500-2 0-2.300-1.700-3.800-1.700S10.200 18 8.200 18C5 18 2.500 14.700 2.500 10.500Z"/><path d="M7 11.500h3M14 11.500h3"/></g></symbol>
       <symbol id="ico-team" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M15.5 4.8a3.5 3.5 0 0 1 0 6.4M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></g></symbol>
       <symbol id="ico-gift" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h12M11 7l5 5-5 5"/><path d="M20 5v14"/></g></symbol>
       <symbol id="ico-shuffle" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3.5c5 0 6 10 11 10H21M3 17h3.5c1.6 0 2.8-1 3.8-2.4M21 7h-3.5c-1.6 0-2.8 1-3.8 2.4"/><path d="m18 4 3 3-3 3M18 14l3 3-3 3"/></g></symbol>
@@ -245,6 +255,13 @@
           <small>Spelers zonder GPS mogen hun plek zelf op de kaart zetten. De rest ziet dat in de stand.</small>
         </span>
       </label>
+      <label class="toggle">
+        <input type="checkbox" id="opt-swindler" checked />
+        <span class="toggle__text">
+          <strong>De Oplichter</strong>
+          <small>Vanaf 3 spelers is één van jullie stiekem de Oplichter: die rolt zakken bij de markten. Na afloop stemmen jullie wie het was.</small>
+        </span>
+      </label>
       <button id="btn-create-lobby" class="btn btn--primary btn--lg btn--block">Lobby openen →</button>
       <p id="setup-error" class="alert" role="alert" hidden></p>
     </div>
@@ -294,6 +311,9 @@
         <span id="hud-capital" class="cash__val">€0</span>
       </div>
       <div id="hud-timer" class="pill timer" aria-label="Resterende tijd">--:--</div>
+      <button id="btn-role" class="pill icon-btn" aria-label="Jouw geheime rol" hidden>
+        <svg class="ico" aria-hidden="true"><use href="#ico-mask"/></svg>
+      </button>
       <button id="btn-location" class="pill icon-btn" aria-label="Jouw locatie">
         <svg class="ico" aria-hidden="true"><use href="#ico-target"/></svg>
       </button>
@@ -310,6 +330,11 @@
         <svg class="ico" aria-hidden="true"><use href="#ico-pin"/></svg>
         <span>Tik op de kaart waar je staat.</span>
         <button id="btn-pick-cancel" class="btn btn--line btn--sm">Annuleer</button>
+      </div>
+      <div id="role-banner" class="banner banner--light" role="status" hidden>
+        <svg class="ico" aria-hidden="true"><use href="#ico-mask"/></svg>
+        <span>Je hebt een geheime rol. Kijk even als niemand meekijkt.</span>
+        <button id="btn-role-view" class="btn btn--ink btn--sm">Bekijk</button>
       </div>
       <button id="newsflash" class="flash" hidden></button>
       <button id="offer-banner" class="offerbar" hidden></button>
@@ -351,6 +376,7 @@
           <button class="seg__btn seg__btn--grow" data-tab="trade" role="tab" aria-pressed="true">Handel</button>
           <button class="seg__btn seg__btn--grow" data-tab="ship" role="tab" aria-pressed="false">Zending</button>
           <button class="seg__btn seg__btn--grow" data-tab="customs" role="tab" aria-pressed="false">Douane</button>
+          <button id="tab-rob" class="seg__btn seg__btn--grow" data-tab="rob" role="tab" aria-pressed="false" hidden>Rollen</button>
         </div>
         <div id="trade-qty" class="seg" role="group" aria-label="Aantal per klik">
           <span class="seg__label">Aantal per klik</span>
@@ -361,6 +387,18 @@
         <div id="trade-status" class="stack trade-status" hidden></div>
         <div id="trade-goods" class="ledger"></div>
         <p id="trade-foot" class="sheet__foot">Het label vergelijkt de prijs met het gemiddelde van alle markten.</p>
+      </div>
+    </div>
+
+    <!-- Geheime rol -->
+    <div id="role-modal" class="sheet" hidden>
+      <div class="sheet__card" role="dialog" aria-modal="true" aria-labelledby="role-title">
+        <div class="sheet__grab"></div>
+        <div class="sheet__head">
+          <h3 id="role-title" class="sheet__title">Jouw rol</h3>
+          <button class="close" data-close aria-label="Sluiten"><svg class="ico" aria-hidden="true"><use href="#ico-x"/></svg></button>
+        </div>
+        <div id="role-body" class="stack"></div>
       </div>
     </div>
 
@@ -480,9 +518,30 @@
   </section>
 
   <!-- ══════════ EINDE ══════════ -->
+  <!-- ══════════ STEMMING (alleen met de Oplichter) ══════════ -->
+  <section id="screen-vote" class="screen screen--flex">
+    <div class="page page--vote">
+      <span class="sticker">★ De markt is gesloten</span>
+      <div class="votehead">
+        <h2 class="h1">Wie is de <mark>Oplichter</mark>?</h2>
+        <div id="vote-timer" class="pill timer" aria-label="Resterende stemtijd">1:00</div>
+      </div>
+      <p id="vote-lead" class="lead"></p>
+      <div id="vote-list" class="votes"></div>
+    </div>
+    <footer class="footer">
+      <button id="btn-vote" class="btn btn--primary btn--lg btn--block" disabled>Kies een naam</button>
+      <p id="vote-wait" class="waiting" hidden>
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span id="vote-progress"></span>
+      </p>
+    </footer>
+  </section>
+
   <section id="screen-end" class="screen">
     <div class="page page--end">
       <span class="sticker">★ De markt is gesloten</span>
+      <div id="end-reveal" class="winner" hidden></div>
       <div id="end-winner" class="winner"></div>
       <span class="label">Eindstand</span>
       <ol id="end-list" class="standings"></ol>
@@ -498,6 +557,7 @@
   <script src="bluff.js"></script>
   <script src="teams.js"></script>
   <script src="risk.js"></script>
+  <script src="swindle.js"></script>
   <script src="session.js"></script>
 </body>
 </html>

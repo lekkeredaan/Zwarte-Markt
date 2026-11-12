@@ -109,6 +109,14 @@ Eén stapel onder de HUD, in deze volgorde:
 - `.row__actions--one`: één brede actieknop per goed. Kan het niet, dan staat de reden op de (gestippelde) knop: "Te weinig cash", "De douane let nog op je".
 - Alles wat elke seconde verandert (aftellen) staat in `#trade-status`, los van de knoppen in `#trade-goods`. Zo vallen tikken niet weg.
 
+### De Oplichter
+- **Rol bekijken:** rond maskerknopje in de HUD (`#btn-role`, `.icon-btn`) en bij de start eenmalig een crème `.banner--light` in `.alerts` ("Je hebt een geheime rol") met knop "Bekijk". De rol springt nooit vanzelf open: de speler kiest zelf het moment.
+- **Rolscherm:** sheet met een `.teaser` (masker, rolnaam in Anton) en daaronder `.rolelist`: drie witte kaartjes met een kop in Anton en één of twee zinnen. Onderaan een `.loc-status` met buit of verlies.
+- **Tabblad Rollen:** vierde tab in het marktscherm, alleen voor de Oplichter. Met vier tabs krijgt `#trade-tabs` de klasse `.seg--four` (kleinere letter, minder ruimte). Inhoud: `.explain`, een `.loc-status` met de wachttijd, en per aanwezige speler een `.member`-rij met knop "Rol".
+- **Stemscherm `#screen-vote`:** nachtachtergrond, kop met geel gemarkeerd woord, aftelklok als `.pill.timer`, en per speler een brede crème pil `.vote` (gekozen = geel met roze schaduw). Onderaan één primaire knop "Stem op …". Na het stemmen staat er `.waiting` met de voortgang.
+- **Onthulling:** `.winner`-kaart boven de winnaar: groen (`.winner--caught`) bij ontmaskerd, roze (`.winner--escaped`) bij ontsnapt, licht de andere kant op gedraaid. Het masker staat op een crème rondje.
+- **Tips met voorkennis:** `.stamp` "Echt" (groen) of "Nep" (roze) achter de tiptekst, alleen bij de Oplichter.
+
 ### Verder spelen `.resume` (startscherm)
 Crème kaart boven "Lobby maken", alleen zichtbaar als dit toestel nog een potje kent: kop in Anton ("Je zat nog in een potje"), daaronder lobbycode en bijnaam op één regel, rechts een ronde sluitknop (`.close`, "Vergeet dit potje") en eronder één brede groene knop **Verder spelen**. Tijdens het ophalen staat er "Bezig…" en zijn beide knoppen uit.
 
@@ -125,8 +133,8 @@ Geen emoji: alles staat als SVG-`<symbol>` bovenin [`index.html`](index.html) en
 
 | Soort | Rooster | Stijl | Voorbeelden |
 |---|---|---|---|
-| Illustratie `ill-*` | 48×48 | Inktlijn 3, vlakke merkkleuren (hex van de tokens), harde inktschaduw 2–3px rechtsonder | `ill-horloges`, `ill-kruiden`, `ill-munten`, `ill-sigaren`, `ill-inval`, `ill-tekort`, `ill-tip`, `ill-kroon`, `ill-zending`, `ill-douane` |
-| Icoon `ico-*` | 24×24 | Lijn 2,5, ronde uiteinden, `currentColor` | `ico-pin`, `ico-share`, `ico-copy`, `ico-trophy`, `ico-tip`, `ico-news`, `ico-target`, `ico-search`, `ico-pen`, `ico-gps-off`, `ico-x`, `ico-team`, `ico-gift`, `ico-shuffle` |
+| Illustratie `ill-*` | 48×48 | Inktlijn 3, vlakke merkkleuren (hex van de tokens), harde inktschaduw 2–3px rechtsonder | `ill-horloges`, `ill-kruiden`, `ill-munten`, `ill-sigaren`, `ill-inval`, `ill-tekort`, `ill-tip`, `ill-kroon`, `ill-zending`, `ill-douane`, `ill-masker` |
+| Icoon `ico-*` | 24×24 | Lijn 2,5, ronde uiteinden, `currentColor` | `ico-pin`, `ico-share`, `ico-copy`, `ico-trophy`, `ico-tip`, `ico-news`, `ico-target`, `ico-search`, `ico-pen`, `ico-gps-off`, `ico-x`, `ico-team`, `ico-gift`, `ico-shuffle`, `ico-mask` |
 
 Maten: `.ill--sm` 22, `.ill--md` 30, `.ill--lg` 40, `.ill--xl` 72; `.ico` 20. Nieuw goed of nieuwe schok? Eerst een illustratie in dezelfde stijl tekenen. Enige extra kleur buiten de tokens: bruin `#A8652F` (sigaar) en `#D9A066` (krat).
 

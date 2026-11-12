@@ -36,6 +36,7 @@ function saveSession() {
   if (locMode === 'manual' && myPos) s.loc = { lat: myPos.lat, lng: myPos.lng };
   if (me.isHost && hostPlan.length) s.host = { plan: hostPlan, lastTipRound };   // schokkenplan: alleen op het toestel van de host
   if (readTips.size) s.readTips = [...readTips].slice(-80);
+  if (roleSeen) s.roleSeen = true;
   storeSet(tabStore(), SESSION_KEY, s);
   storeSet(deviceStore(), LAST_KEY, s);
 }
@@ -69,6 +70,7 @@ async function resumeSession(s) {
     me.pid = s.pid; me.name = s.name; code = s.code; game = g;
     me.isHost = g.hostId === s.pid;
     readTips = new Set(s.readTips || []);
+    roleSeen = !!s.roleSeen;
     if (s.loc && g.config?.allowManualLocation !== false) { locMode = 'manual'; myPos = { lat: s.loc.lat, lng: s.loc.lng }; }
     if (me.isHost && g.status === 'playing') {
       hostPlan = s.host?.plan || [];
