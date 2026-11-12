@@ -2,7 +2,7 @@
    ZWARTE MARKT — kernlogica
    Realtime via Firebase RTDB (REST + polling). Zonder DB_URL = lokale testmodus.
    Zie ook: location.js (GPS / handmatige locatie), bluff.js (tips, schokken),
-   teams.js, risk.js, swindle.js (de Oplichter) en session.js (terugkomen na herladen).
+   teams.js, risk.js, swindle.js (de Oplichter), access.js (toegangscode) en session.js (terugkomen na herladen).
    ══════════════════════════════════════════════════════════════ */
 
 // ── Firebase config ───────────────────────────────────────────────
@@ -228,7 +228,7 @@ async function createLobby() {
     status: 'lobby',
     hostId: me.pid,
     createdAt: Date.now(),
-    config: { startCapital: capital, durationSec: duration, gpsCheck, allowManualLocation, teamSize, swindler },
+    config: { startCapital: capital, durationSec: duration, gpsCheck, allowManualLocation, teamSize, swindler, accessUntil: accessUntil || null },
     markets: buildMarketsNode(markets),
     players: { [me.pid]: host },
   };
@@ -946,6 +946,7 @@ function bind() {
   bindBluff();      // bluff.js
   bindTeams();      // teams.js
   bindSwindle();    // swindle.js
+  bindAccess();     // access.js
   bindSession();    // session.js
 }
 
@@ -954,6 +955,7 @@ function showHomeError(msg) { const e = $('home-error'); e.textContent = msg; e.
 function goName() {
   showScreen('screen-name');
   $('name-error').hidden = true;
+  renderAccessField();   // access.js: codeveld bij lobby maken
   setTimeout(() => $('input-name').focus(), 100);
 }
 
@@ -962,8 +964,9 @@ async function onNameOk() {
   if (name.length < 2) { const e = $('name-error'); e.textContent = 'Kies een naam van minstens 2 tekens.'; e.hidden = false; return; }
   me.name = name;
   const btn = $('btn-name-ok'); btn.disabled = true;
+  $('name-error').hidden = true;
   try {
-    if (pendingAction === 'create') enterSetup();
+    if (pendingAction === 'create') { if (await checkAccess(btn)) enterSetup(); }
     else await joinLobby(code);
   } catch (e) {
     const el = $('name-error'); el.textContent = e.message || 'Er ging iets mis.'; el.hidden = false;

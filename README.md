@@ -4,7 +4,7 @@ Een locatie-gebaseerd **handels- en blufspel** voor de stad, onderdeel van [Ravo
 
 Jullie zijn smokkelaars. Reis fysiek door de stad langs **markten** (echte plekken op de kaart), koop goederen goedkoop in en verkoop ze duur door. Prijzen schommelen live, de markt fluistert je geheime tips in (echt of nep) en invallen of tekorten zetten alles op zijn kop. Wie na de tijd de rijkste smokkelaar is, wint.
 
-Geen app, geen account, geen activatiecode: join op je telefoon met een **lobbycode van 6 tekens**.
+Geen app, geen account: join op je telefoon met een **lobbycode van 6 tekens**. Wie de lobby maakt, heeft een **toegangscode** nodig uit de [webshop](https://www.ravotters.nl/zwarte-markt); meedoen is gratis.
 
 ## Spelen
 1. Eén speler maakt een lobby en zet 2–6 **markten** op de kaart (zoeken op adres kan ook).
@@ -37,6 +37,11 @@ De host kiest bij de regels: ieder voor zich, of teams van 2, 3 of 4.
 ### Herladen en terugkomen
 Pagina ververst, of je telefoon heeft het tabblad herladen? Je komt vanzelf terug in je potje, met dezelfde kas, koffer, tips en zendingen. Was het tabblad dicht, dan staat er op het startscherm een knop **Verder spelen**. Dat werkt tot een dag na het potje, op hetzelfde toestel en in dezelfde browser.
 
+### Toegangscode
+- Bij "Lobby maken" vraagt het spel om een code, die je per mail krijgt na het kopen op ravotters.nl. Vanaf het eerste gebruik is hij 72 uur geldig; in die tijd kun je zoveel lobby's maken als je wilt.
+- De code wordt gecontroleerd door de webshop (`/api/codes/verify`, spel `zwarte-markt`). Het spel zelf bevat geen codes of geheimen.
+- **Mastercode:** `ZM-` plus het vaste deel dat bij de webshop als `MASTER_SECRET` in Vercel staat (hetzelfde patroon als bij de andere spellen). Werkt altijd; na 10 foute pogingen volgt 10 minuten slot.
+
 ### In je eentje testen
 Open het spel in twee vensters: één gewoon en één privé/incognito (of telefoon + laptop). Maak in het ene een lobby en doe in het andere mee met de code. Zet bij de regels *Handmatige locatie* aan en kies een korte speeltijd; dan spring je met een tik op de kaart van markt naar markt. Gebruik niet "tabblad dupliceren": dan krijgen beide tabbladen dezelfde speler.
 
@@ -48,6 +53,7 @@ Open het spel in twee vensters: één gewoon en één privé/incognito (of telef
   - [`teams.js`](teams.js): teamindeling, teamstand, geven, teamgenoten op de kaart
   - [`risk.js`](risk.js): zendingen en de douane
   - [`swindle.js`](swindle.js): de Oplichter (rol, zakkenrollen, stemming, onthulling)
+  - [`access.js`](access.js): toegangscode controleren bij de webshop
   - [`session.js`](session.js): terugkomen in je potje na herladen (opslag op het eigen toestel)
 - Server: één Vercel-functie, [`api/cleanup.js`](api/cleanup.js), die dagelijks oude lobby's opruimt.
 - Kaart: **Leaflet** + OpenStreetMap.

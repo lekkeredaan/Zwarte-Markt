@@ -117,6 +117,9 @@ Eén stapel onder de HUD, in deze volgorde:
 - **Onthulling:** `.winner`-kaart boven de winnaar: groen (`.winner--caught`) bij ontmaskerd, roze (`.winner--escaped`) bij ontsnapt, licht de andere kant op gedraaid. Het masker staat op een crème rondje.
 - **Tips met voorkennis:** `.stamp` "Echt" (groen) of "Nep" (roze) achter de tiptekst, alleen bij de Oplichter.
 
+### Toegangscode `.access` (naamscherm)
+Alleen bij "Lobby maken": label "Toegangscode", een `.field.field--code.field--access` (kleinere letterafstand, past ABCD-EFGH) en een korte uitleg met een gele onderstreepte link naar de webshop. De laatst gebruikte code staat al ingevuld. Tijdens het controleren staat er "Code controleren…" op de knop Verder; een fout komt in de bestaande `.alert` onder de knop.
+
 ### Verder spelen `.resume` (startscherm)
 Crème kaart boven "Lobby maken", alleen zichtbaar als dit toestel nog een potje kent: kop in Anton ("Je zat nog in een potje"), daaronder lobbycode en bijnaam op één regel, rechts een ronde sluitknop (`.close`, "Vergeet dit potje") en eronder één brede groene knop **Verder spelen**. Tijdens het ophalen staat er "Bezig…" en zijn beide knoppen uit.
 

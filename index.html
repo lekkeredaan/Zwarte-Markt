@@ -176,6 +176,12 @@
       <h2 class="h1">Wie ben <mark>jij?</mark></h2>
       <p class="lead">Kies je smokkelaarsnaam. Die zien de anderen in de lobby.</p>
       <input id="input-name" class="field" maxlength="16" placeholder="bv. Sjaak de Smokkelaar" autocomplete="nickname" aria-label="Je naam" />
+      <div id="access-box" class="access" hidden>
+        <label class="label" for="input-access">Toegangscode</label>
+        <input id="input-access" class="field field--code field--access" maxlength="40" placeholder="ABCD-EFGH"
+               autocomplete="off" autocapitalize="characters" spellcheck="false" />
+        <p class="access__hint">Wie de lobby maakt, heeft een code nodig: 72 uur spelen met je hele groep. Meedoen is gratis. <a id="access-shop" class="access__link" target="_blank" rel="noopener">Nog geen code? Koop er een op ravotters.nl</a></p>
+      </div>
       <button id="btn-name-ok" class="btn btn--primary btn--lg btn--block">Verder →</button>
       <p id="name-error" class="alert" role="alert" hidden></p>
     </div>
@@ -558,6 +564,7 @@
   <script src="teams.js"></script>
   <script src="risk.js"></script>
   <script src="swindle.js"></script>
+  <script src="access.js"></script>
   <script src="session.js"></script>
 </body>
 </html>
