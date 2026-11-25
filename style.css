@@ -451,7 +451,7 @@ strong { font-weight: 900; }
 .timer { margin-left: auto; font-family: var(--font-display); font-size: var(--fs-xl); letter-spacing: 1px; font-variant-numeric: tabular-nums; }
 .timer.is-low { background: var(--pink); animation: blink-bg 1s infinite; }
 @keyframes blink-bg { 50% { opacity: .7; } }
-.icon-btn { width: var(--tap); padding: 0; justify-content: center; cursor: pointer; }
+.icon-btn { width: var(--tap); min-width: 44px; flex-shrink: 0; padding: 0; justify-content: center; cursor: pointer; }
 .icon-btn .ico { width: 24px; height: 24px; }
 .icon-btn.is-manual { background: var(--pink); }
 
@@ -484,7 +484,11 @@ strong { font-weight: 900; }
   font-size: var(--fs-sm);
   line-height: 1.25;
 }
-.banner .btn { margin-left: auto; flex-shrink: 0; }
+.banner { flex-wrap: wrap; }
+.banner > span { flex: 1 1 150px; min-width: 0; }
+.banner .btn { margin-left: auto; flex-shrink: 0; max-width: 100%; }
+/* Niet twee grote meldingen tegelijk over de kaart: de rol-melding wacht tot de andere weg is (de maskerknop in de balk werkt altijd) */
+.alerts > .banner:not([hidden]) ~ #role-banner { display: none; }
 .banner--light { background: var(--cream); }
 
 /* Koffer */
@@ -681,6 +685,7 @@ strong { font-weight: 900; }
   font-weight: 800;
 }
 .standings li.is-me { background: var(--yellow); }
+.standings li > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .rank { font-family: var(--font-display); font-size: 22px; text-align: center; }
 .worth { font-family: var(--font-display); font-size: 22px; }
 

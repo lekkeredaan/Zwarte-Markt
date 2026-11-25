@@ -105,7 +105,7 @@ function renderRob(m, near) {
   const block = !near ? 'Niet bij de markt' : wait ? 'Even wachten' : '';
   setHtml('trade-goods', here.length ? here.map(v => `
       <div class="member">
-        <span class="avatar" aria-hidden="true">${escapeHtml(v.name.trim().charAt(0).toUpperCase() || '?')}</span>
+        <span class="avatar" aria-hidden="true">${escapeHtml(firstChar(v.name))}</span>
         <span class="member__name">${escapeHtml(v.name)}<small class="member__sub">was hier net</small></span>
         <button class="btn btn--ink btn--sm" data-act="rob" data-p="${v.pid}" ${block ? 'disabled' : ''}>${block || 'Rol'}</button>
       </div>`).join('')
@@ -146,11 +146,13 @@ function foldThefts() {
     let capital = p.capital || 0, robbed = p.robbed || 0, lost = 0, where = null;
     const extra = {};
     for (const [id, t] of fresh) {
-      let x = t.by === me.pid ? 0 : Math.min(ROB_MAX, Math.round(capital * ROB_PCT));
+      // Alleen de echte Oplichter kan rollen (via de database kan iedereen een 'diefstal' neerzetten)
+      const real = !!t?.by && t.by !== me.pid && t.by === game.swindler && !!game.players?.[t.by];
+      let x = real ? Math.min(ROB_MAX, Math.round(capital * ROB_PCT)) : 0;
       if (x < ROB_MIN) x = 0;
       capital -= x; robbed += x; lost += x;
       extra[`players/${me.pid}/thefts/${id}`] = null;
-      if (t.by && t.by !== me.pid && game.players?.[t.by]) {
+      if (real) {
         extra[`players/${t.by}/payments/${id}`] = { kind: 'loot', amount: x, fromName: me.name, at: now };
       }
       if (x > 0) {
@@ -273,7 +275,7 @@ function renderVoting() {
     .sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''))
     .map(([pid, p]) => `
       <button class="vote" data-vote="${pid}" aria-pressed="${pid === chosen}" ${mine ? 'disabled' : ''}>
-        <span class="avatar" aria-hidden="true">${escapeHtml((p.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>
+        <span class="avatar" aria-hidden="true">${escapeHtml(firstChar(p.name))}</span>
         <span class="vote__name">${escapeHtml(p.name || '???')}</span>
         ${pid === mine ? '<span class="tag">Jouw stem</span>' : ''}
       </button>`).join(''));

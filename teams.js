@@ -36,7 +36,7 @@ function teammates() {
   return mine ? teamMembers(mine).filter(([pid]) => pid !== me.pid) : [];
 }
 function isTeammate(pid) { return teamMode() && pid !== me.pid && !!teamOf(me.pid) && teamOf(pid) === teamOf(me.pid); }
-function initial(name) { return escapeHtml((name || '?').trim().charAt(0).toUpperCase() || '?'); }
+function initial(name) { return escapeHtml(firstChar(name)); }
 
 // Kleinste team voor een nieuwkomer (n = aantal spelers inclusief de nieuwkomer)
 function smallestTeamId(players, n) {

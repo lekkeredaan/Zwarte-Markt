@@ -202,9 +202,12 @@ function foldPayments() {
     const extra = {};
     let loot = 0;
     for (const [id, x] of fresh) {
-      capital += x.amount || 0;
-      if (x.kind === 'loot') loot += x.amount || 0;
-      if (x.good && x.qty) inv[x.good] = (inv[x.good] || 0) + x.qty;
+      // Alleen positieve bedragen en echte waren: een 'gift' van -€300 mag geen geld weghalen
+      const amount = Math.max(0, Math.round(Number(x?.amount) || 0));
+      const qty = Math.max(0, Math.floor(Number(x?.qty) || 0));
+      capital += amount;
+      if (x?.kind === 'loot') loot += amount;
+      if (GOOD[x?.good] && qty) inv[x.good] = (inv[x.good] || 0) + qty;
       extra[`players/${me.pid}/payments/${id}`] = null;
     }
     await writeMe(loot ? { capital, inv, loot: (p.loot || 0) + loot } : { capital, inv }, extra);
@@ -425,7 +428,7 @@ function renderSell() {
       <span class="form__label">Aan wie?</span>
       ${others.length ? `<div class="picks">${others.map(([pid, p]) => `
         <button class="pick" data-to="${pid}" aria-pressed="${sellDraft.to === pid}">
-          <span class="avatar" aria-hidden="true">${escapeHtml((p.name || '?').charAt(0).toUpperCase())}</span>${escapeHtml(p.name || '?')}
+          <span class="avatar" aria-hidden="true">${escapeHtml(firstChar(p.name))}</span>${escapeHtml(p.name || '?')}
         </button>`).join('')}</div>` : '<p class="note">Er zijn nog geen tegenstanders om aan te verkopen.</p>'}
     </div>
     <div>

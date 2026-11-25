@@ -67,7 +67,7 @@ async function resumeSession(s) {
       return false;
     }
 
-    me.pid = s.pid; me.name = s.name; code = s.code; game = g;
+    me.pid = s.pid; me.name = s.name; code = s.code; game = normalizeGame(g);
     me.isHost = g.hostId === s.pid;
     readTips = new Set(s.readTips || []);
     roleSeen = !!s.roleSeen;

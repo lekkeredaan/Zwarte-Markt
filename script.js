@@ -56,7 +56,23 @@ function genCode() {
   return c;
 }
 function $(id) { return document.getElementById(id); }
-function euro(n) { return '€' + Math.round(n).toLocaleString('nl-NL'); }
+function euro(n) { return '€' + Math.round(Number(n) || 0).toLocaleString('nl-NL'); }
+// Eerste letter voor het rondje: een emoji telt als één teken (charAt pakte de helft)
+function firstChar(name) { return (Array.from(String(name || '').trim())[0] || '?').toUpperCase(); }
+// Namen en getallen uit de database netjes maken: één speler met rare waarden mag het scherm van de rest niet verpesten
+const NAME_MAX = 20;
+function cleanName(s) { const t = Array.from(String(s ?? '').trim()).slice(0, NAME_MAX).join(''); return t || '???'; }
+function normalizeGame(g) {
+  if (!g || typeof g !== 'object') return g;
+  if (g.players) for (const [pid, p] of Object.entries(g.players)) if (!p || typeof p !== 'object') delete g.players[pid];
+  for (const p of Object.values(g.players || {})) {
+    p.name = cleanName(p.name);
+    p.capital = Number.isFinite(Number(p.capital)) ? Number(p.capital) : 0;
+    if (!p.inv || typeof p.inv !== 'object') p.inv = {};
+    for (const k of Object.keys(p.inv)) { const n = Math.floor(Number(p.inv[k])); if (!GOOD[k] || !(n > 0)) delete p.inv[k]; else p.inv[k] = n; }
+  }
+  return g;
+}
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -108,22 +124,23 @@ function closeAllSheets() { document.querySelectorAll('.sheet').forEach(s => clo
 // ══════════════════════════════════════════════════════════════════
 //  Firebase REST (met foutafhandeling)
 // ══════════════════════════════════════════════════════════════════
+const OFFLINE_MSG = 'Geen verbinding. Probeer het zo nog eens.';
 async function fbGet(path) {
-  const r = await fetch(`${DB_URL}/${path}.json`);
+  const r = await fetch(`${DB_URL}/${path}.json`).catch(() => { throw new Error(OFFLINE_MSG); });
   if (!r.ok) throw new Error(`Database leesfout (${r.status})`);
   return r.json();
 }
 async function fbPut(path, data) {
   const r = await fetch(`${DB_URL}/${path}.json`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
-  });
+  }).catch(() => { throw new Error(OFFLINE_MSG); });
   if (!r.ok) throw new Error(`Database schrijffout (${r.status})`);
   return r.json();
 }
 async function fbPatch(path, data) {
   const r = await fetch(`${DB_URL}/${path}.json`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
-  });
+  }).catch(() => { throw new Error(OFFLINE_MSG); });
   if (!r.ok) throw new Error(`Database schrijffout (${r.status})`);
   return r.json();
 }
@@ -254,6 +271,9 @@ async function joinLobby(enteredCode) {
   const g = await fbGet(`games/${enteredCode}`);
   if (!g) throw new Error('Geen lobby met die code gevonden.');
   if (g.status === 'ended') throw new Error('Dit potje is al afgelopen.');
+  normalizeGame(g);
+  const taken = Object.values(g.players || {}).some(p => p.name.toLowerCase() === cleanName(me.name).toLowerCase());
+  if (taken) throw new Error('Die naam is al bezet in deze lobby. Kies een andere naam.');
   code = enteredCode;
   game = g;
   me.isHost = (g.hostId === me.pid);
@@ -284,7 +304,7 @@ function rosterLi([pid, p]) {
   const name = p.name || '???';
   const isMe = pid === me.pid;
   return `<li class="${isMe ? 'is-me' : ''}">
-      <span class="avatar" aria-hidden="true">${escapeHtml(name.trim().charAt(0).toUpperCase() || '?')}</span>
+      <span class="avatar" aria-hidden="true">${escapeHtml(firstChar(name))}</span>
       <span>${escapeHtml(name)}${isMe ? ' <small>(jij)</small>' : ''}</span>
       ${p.isHost ? '<span class="tag">Host</span>' : ''}
     </li>`;
@@ -603,14 +623,14 @@ function avgPrice(gid) {
   return sum / ms.length;
 }
 function netWorth(p) {
-  let w = p.capital || 0;
-  for (const g of GOODS) w += (p.inv?.[g.id] || 0) * avgPrice(g.id);
+  let w = Number(p.capital) || 0;
+  for (const g of GOODS) w += (Number(p.inv?.[g.id]) || 0) * avgPrice(g.id);
   // Nog niet bijgeschreven tipbetalingen tellen mee (de mijne die al verwerkt zijn niet dubbel)
   const isMe = p === myPlayer();
   for (const [id, pay] of Object.entries(p.payments || {})) {
     if (isMe && foldedPays.has(id)) continue;
-    w += pay.amount || 0;
-    if (pay.good && pay.qty) w += pay.qty * avgPrice(pay.good);
+    w += Math.max(0, Number(pay?.amount) || 0);
+    if (GOOD[pay?.good] && pay.qty > 0) w += Math.floor(pay.qty) * avgPrice(pay.good);
   }
   return w;
 }
@@ -658,7 +678,7 @@ async function refreshEnd(c) {
     const g = await fbGet(`games/${c}`);
     if (!g || !endedShown || code !== c) return;
     g.status = 'ended';
-    game = g;
+    game = normalizeGame(g);
     renderEnd();
   } catch (e) { /* dan blijft de stand zoals hij was */ }
 }
@@ -706,6 +726,7 @@ function startPolling() {
 }
 
 function mergeRemote(g) {
+  normalizeGame(g);
   const wasStatus = game?.status;
   // Een poll die vlak na mijn eigen schrijfactie binnenkomt kan nog oud zijn:
   // houd mijn kas/koffer dan even lokaal vast (ik ben de enige die ze schrijft).
@@ -755,7 +776,11 @@ function initSetupMap() {
       () => {}, { enableHighAccuracy: true, timeout: 8000 }
     );
   }
-  setupMap.on('click', e => addSetupMarket(e.latlng.lat, e.latlng.lng));
+  // Een dubbele tik op 'Verder' (vorig scherm) mag hier geen markt neerzetten
+  const openedAt = Date.now();
+  setupMap.on('click', e => { if (Date.now() - openedAt < 700) return; addSetupMarket(e.latlng.lat, e.latlng.lng); });
+  setupMap.doubleClickZoom.disable();   // ook niet inzoomen door die tweede tik
+  setTimeout(() => setupMap && setupMap.doubleClickZoom.enable(), 700);
   setTimeout(() => setupMap && setupMap.invalidateSize(), 200);
 }
 
