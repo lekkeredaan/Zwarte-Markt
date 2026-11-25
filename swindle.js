@@ -76,7 +76,7 @@ function clearPresence() {
 function presentAt(marketId, now = Date.now()) {
   return Object.entries(game?.players || {})
     .filter(([pid, p]) => pid !== me.pid && !isTeammate(pid) && p.at?.m === marketId && now - (p.at.t || 0) < PRESENCE_MS)
-    .map(([pid, p]) => ({ pid, name: p.name || '???' }))
+    .map(([pid, p]) => ({ pid, name: p.name }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -147,6 +147,7 @@ function foldThefts() {
     const extra = {};
     for (const [id, t] of fresh) {
       // Alleen de echte Oplichter kan rollen (via de database kan iedereen een 'diefstal' neerzetten)
+      // shortcut: game.swindler kan elke speler zelf overschrijven, tot de database-regels (plan B) dat dichtzetten
       const real = !!t?.by && t.by !== me.pid && t.by === game.swindler && !!game.players?.[t.by];
       let x = real ? Math.min(ROB_MAX, Math.round(capital * ROB_PCT)) : 0;
       if (x < ROB_MIN) x = 0;
@@ -276,7 +277,7 @@ function renderVoting() {
     .map(([pid, p]) => `
       <button class="vote" data-vote="${pid}" aria-pressed="${pid === chosen}" ${mine ? 'disabled' : ''}>
         <span class="avatar" aria-hidden="true">${escapeHtml(firstChar(p.name))}</span>
-        <span class="vote__name">${escapeHtml(p.name || '???')}</span>
+        <span class="vote__name">${escapeHtml(p.name)}</span>
         ${pid === mine ? '<span class="tag">Jouw stem</span>' : ''}
       </button>`).join(''));
   const btn = $('btn-vote');

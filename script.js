@@ -301,7 +301,7 @@ function enterLobby() {
 
 // Eén rij in een spelerslijst (ook gebruikt door de teamlobby)
 function rosterLi([pid, p]) {
-  const name = p.name || '???';
+  const name = p.name;
   const isMe = pid === me.pid;
   return `<li class="${isMe ? 'is-me' : ''}">
       <span class="avatar" aria-hidden="true">${escapeHtml(firstChar(name))}</span>
@@ -638,7 +638,7 @@ function standings() {
   // Na afloop telt de uitslag van de stemming mee (swindle.js)
   const v = game?.status === 'ended' ? verdict() : null;
   return Object.entries(game?.players || {})
-    .map(([pid, p]) => ({ pid, name: p.name || '???', worth: Math.max(0, netWorth(p) + finalAdjust(pid, v)), manual: !!p.manualLoc, team: p.team || null }))
+    .map(([pid, p]) => ({ pid, name: p.name, worth: Math.max(0, netWorth(p) + finalAdjust(pid, v)), manual: !!p.manualLoc, team: p.team || null }))
     .sort((a, b) => b.worth - a.worth);
 }
 function renderLeaderboardInto(elId) {
@@ -842,6 +842,8 @@ async function onSetupSearch(e) {
 // ══════════════════════════════════════════════════════════════════
 function leaveToHome() {
   if (game) forgetSession();   // bewust weggaan: niet meer aanbieden om verder te spelen
+  // Nog niet gestart: haal jezelf uit de lobby, anders blijft er een spookspeler (die zelfs Oplichter kan worden) en is je naam bezet
+  if (game?.status === 'lobby' && !me.isHost && code && !isLocal) fbPatch(`games/${code}/players`, { [me.pid]: null }).catch(() => {});
   stopTimers();
   stopPicking();
   closeAllSheets();

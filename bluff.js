@@ -428,7 +428,7 @@ function renderSell() {
       <span class="form__label">Aan wie?</span>
       ${others.length ? `<div class="picks">${others.map(([pid, p]) => `
         <button class="pick" data-to="${pid}" aria-pressed="${sellDraft.to === pid}">
-          <span class="avatar" aria-hidden="true">${escapeHtml(firstChar(p.name))}</span>${escapeHtml(p.name || '?')}
+          <span class="avatar" aria-hidden="true">${escapeHtml(firstChar(p.name))}</span>${escapeHtml(p.name)}
         </button>`).join('')}</div>` : '<p class="note">Er zijn nog geen tegenstanders om aan te verkopen.</p>'}
     </div>
     <div>
